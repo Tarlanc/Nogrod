@@ -1,0 +1,7 @@
+Actor	Function
+Obama, Barrack	President
+Van Hollen, Chris	Representative
+Ryan, Paul	Representative
+Cruz, Ted	Senator
+Christie, Chris	Governor
+Kerry, John	Secretary of State

@@ -1,0 +1,20 @@
+Show_ID	Station	Date	Actor	Actor_Affiliation	Quotation	Issue	Argument_Moral	Argument_Economy	Argument_Voter	Argument_Justice	Argument_Faith	Attack	Attack_Target
+FN001	Fox News	Mar 13	Obama, Barrack	Dem	Direct	Budget	1	1	0	0	0	0	
+FN001	Fox News	Mar 13	Van Hollen, Chris	Dem	Indirect	Budget	0	0	0	0	0	0	
+FN001	Fox News	Mar 13	Ryan, Paul	Rep	Direct	Budget	0	0	0	1	0	1	Obama, Barrack
+FN001	Fox News	Mar 13	Cruz, Ted	Rep	Direct	Obamacare	0	1	0	0	0	1	Obama, Barrack
+FN002	Fox News	Mar 14	Christie, Chris	Rep	Indirect	Obamacare	1	0	1	0	0	0	
+FN002	Fox News	Mar 14	Ryan, Paul	Rep	Direct	Budget	0	0	0	0	1	1	Biden, John
+FN002	Fox News	Mar 14	Kerry, John	Dem	Indirect	Budget	1	0	1	0	0	0	
+FN003	Fox News	Mar 20	Christie, Chris	Rep	Direct	Iran	0	0	0	0	1	1	Foreign Actor
+PB001	PBS	Mar 13	Van Hollen, Chris	Dem	Direct	Budget	0	1	0	1	0	0	
+PB002	PBS	Mar 15	Obama, Barrack	Dem	Indirect	Iran	0	0	0	0	0	1	Foreign Actor
+PB002	PBS	Mar 15	Cruz, Ted	Rep	Direct	Iran	0	0	0	0	0	0	
+PB003	PBS	Mar 20	Van Hollen, Chris	Dem	Direct	Budget	0	1	0	1	0	0	
+PB003	PBS	Mar 20	Obama, Barrack	Dem	Indirect	Obamacare	0	0	0	0	0	0	
+AB001	ABC News	Mar 14	Ryan, Paul	Rep	Direct	Obamacare	0	0	0	0	1	0	
+AB001	ABC News	Mar 14	Kerry, John	Dem	Direct	Obamacare	0	0	0	1	0	0	
+AB001	ABC News	Mar 14	Cruz, Ted	Rep	Direct	Obamacare	0	0	0	0	1	0	
+AB001	ABC News	Mar 14	Van Hollen, Chris	Dem	Direct	Budget	0	1	0	0	0	1	Tea Party
+AB002	ABC News	Mar 15	Obama, Barrack	Dem	Direct	Iran	1	0	0	0	0	0	
+AB002	ABC News	Mar 15	Kerry, John	Dem	Indirect	Iran	0	0	1	0	0	1	Foreign Actor
