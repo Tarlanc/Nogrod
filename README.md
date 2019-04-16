@@ -7,4 +7,4 @@ The program is based on the Angrist engine for content analysis data input and i
 
 As of version 1.1, Nogrod may also be included as a module to any Python script. Upon inclusion, most of the functions of Nogrod may be called directly. The syntax is provided in the glossary in the appendix of the documentation.
 
-Please refer to the full documentation for further information.
+Please refer to the full documentation, Nogrod_1-1.pdf, for further information.
