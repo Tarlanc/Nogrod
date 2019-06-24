@@ -7,9 +7,9 @@ The program is based on the Angrist engine for content analysis data input and i
 
 ## How to use it: Quick Start
 In order to use Nogrod, three files (Nogrod.py, n_codebook.ini, and n.settings.ini) need to be in the same directory on your computer.
-On Windows: Install Python 2.7 or 3.x and double-click on Nogrod.py to start the program.
-On Mac: Technically, the Tk-Interface should work on Mac but it was not tested. The best practice to get it to run on Mac is to install a Windows Emulator (e.g. Wine) and install Python for Windows to run it from within this emulator.
-On Linux: Again, an emulator for Windows programs is recommended.
+- On Windows: Install Python 2.7 or 3.x and double-click on Nogrod.py to start the program.
+- On Mac: Technically, the Tk-Interface should work on Mac but it was not tested. The best practice to get it to run on Mac is to install a Windows Emulator (e.g. Wine) and install Python for Windows to run it from within this emulator.
+- On Linux: Again, an emulator for Windows programs is recommended.
 
 When the window opens, there is only one button: It allows you to select the data manipulation/analysis function. As soon as you choose a function, Nogrod guides you through the entry of required parameters to run the function. All parameters are entered by means of drop down menues, lists, and checkboxes.
 
