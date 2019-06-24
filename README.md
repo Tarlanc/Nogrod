@@ -5,6 +5,13 @@ Nogrod is a script that runs both in Python 2.7 and 3.x which uses the tk-interf
 
 The program is based on the Angrist engine for content analysis data input and is specifically designed to read and process the data stored from Angrist. It may, however, be used for any kind of data which is stored in textfiles.
 
-As of version 1.1, Nogrod may also be included as a module to any Python 2.7 or 3.x script. Upon inclusion, most of the functions of Nogrod may be called directly. The syntax is provided in the glossary in the appendix of the documentation.
-
 Please refer to the full documentation, Nogrod_1-1.pdf, for further information.
+
+
+Recent updates:
+- As of Version 1.0, Nogrod may be used in Python 3.x
+- As of version 1.1, Nogrod may also be included as a module to any Python 2.7 or 3.x script. Upon inclusion, most of the functions of Nogrod may be called directly. The syntax is provided in the glossary in the appendix of the documentation.
+
+
+Next updates:
+- Nogrod is currently being updated to include functions for text analysis, automated annotation, and machine learning. While the functions for creating corpora and ML by Support Vector Machines are already operational, dictionary annotation, term mapping and Naive Bayes prediction will follow soon. 
