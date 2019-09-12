@@ -142,7 +142,6 @@ class Anzeige(Frame):
         codebook = {}
         if available('Codebook'):
             path = resource_path(settings['Codebook'])
-            print(path)
             codebook = get_codebook(path) #settings['Codebook'])
         else:
             codebook = get_codebook('a_codebook.ini')
@@ -1004,7 +1003,7 @@ class Anzeige(Frame):
 ############## Duplicate analysis (N-Gram Shingling)
 
         elif prog_pos == 'dupli_in1':
-            self.question_file('SVM_Input',1)
+            self.question_file('NGS_Input',1)
             self.question_dd('In_Sep',2)
             self.question_dd('In_Header',3)
 
@@ -1020,10 +1019,17 @@ class Anzeige(Frame):
 
         elif prog_pos == 'dupli_opt':
             self.question_dd('NGS_Nglen',1)
-            self.question_dd('NGS_Overlap',2)
+            #self.question_txt('NGS_Overlap',2)
 
-        elif prog_pos == 'svm_out':
+        elif prog_pos == 'dupli_dec':
+            self.question_txt('NGS_Minover',1)
+            self.question_dd('NGS_Sym',2)
+            self.question_dd('NGS_Share',3)
+
+        elif prog_pos == 'dupli_out':
             self.question_file('NGS_Out',1,'save')
+            self.question_dd('Out_Header',2)
+            self.question_dd('Out_Sep',3)            
 
 
 ############################## NCCR Populism
@@ -1535,6 +1541,12 @@ class Anzeige(Frame):
                     self.anzeigen()
                     self.verbout('New Procedure: Duplicate analysis using n-gram shingles')
                     prog_pos = 'dupli_in1'
+                    self.ask()
+                elif m in ['Dupli2']:
+                    verb('----Choice: Finding duplicates')
+                    self.anzeigen()
+                    self.verbout('New Procedure: Duplicate analysis of folder using n-gram shingles')
+                    prog_pos = 'dupli_in2'
                     self.ask()
                 elif m == 'NCCR1':
                     verb('----Choice: Adding Populism')
@@ -4140,7 +4152,6 @@ class Anzeige(Frame):
                                 rm = rmargin['G'+ "{0:02}".format(n+1)]
                                 cm = cmargin['P'+ "{0:02}".format(n+1)]
                                 pc = pc + (float(rm+cm)/ntotal)**2
-                            #print(pc)
                             if not pc == 1:
                                 kappa = (pa-pc)/(1-pc)
                             else:
@@ -4154,7 +4165,6 @@ class Anzeige(Frame):
                                             
                     
                 else:
-                    #print(baum_schreiben(solution))
                     is_member = {}
                     v_label = {}
                     for i in range(len(storage['Data'][varlist[0]])):
@@ -5212,7 +5222,6 @@ class Anzeige(Frame):
                 verbout('\n',master=self)
 
                 curve = svm_prf_curve(tdm, rvec, classvec) ##Creates a dataset with PRF values for all possible intercepts.
-                #print(display_dset(curve,sep="\t"))
 
                 self.display_line_plot({'X':curve[0]['Intercept'],'Y':list(zip(curve[0]['Precision'],curve[0]['Recall'],curve[0]['F_Score'])),
                                         'Title':'Precision (black), Recall (blue) and F (red) in relation to Intercept','Type':'Line'})
@@ -5325,25 +5334,91 @@ class Anzeige(Frame):
 
             elif prog_pos == 'dupli_opt':
                 self.store_var_all()
-                self.clean_up_all()                
-                prog_pos = 'dupli_opt'
-                self.ask()
+
+                if 'NGS_Overlap' in storage.keys():
+                    accept = 0
+                    try:
+                        storage['NGS_Overlap']=int(storage['NGS_Overlap'])
+                        accept = 1
+                    except:
+                        self.message("Invalid-Selection07")
+                else:
+                    accept = 1
+                if accept == 1:
+                    self.clean_up_all()
+                    storage["Text_Matrix"] = duplicate_shingling([storage["Data"],storage["D_Var"]],
+                                                                 storage["NGS_Tid"][1],
+                                                                 storage["NGS_Fulltext"][1],
+                                                                 int(storage["NGS_Nglen"][1]),master=self)
+                    prog_pos = 'dupli_dec'
+                    self.ask()
+
+            elif prog_pos == 'dupli_dec':
+                self.store_var_all()
+
+                try:
+                    storage["NGS_Minover"] = int(storage["NGS_Minover"])
+                    self.clean_up_all()
+                    prog_pos = 'dupli_out'
+                    self.ask()
+                except:
+                    self.message("Invalid-Selection07")
+                
 
             elif prog_pos == 'dupli_out':
                 self.store_var_all()
-                data = storage['Data']
-
-                ngl = int(storage['NGS_Nglen'][1])
-                idvar = storage['NGS_Tid'][1]
-                tvar = storage['NGS_Fulltext'][1]
-                #over = storage['NGS_Overlap']
+                tm = storage["Text_Matrix"]
+                
+                minover = storage["NGS_Minover"]
+                sym = storage['NGS_Sym'][1]
+                sh = storage['NGS_Share'][1]
                 
                 outfile = make_fname(storage['NGS_Out'])
                 header = int(storage['Out_Header'][1])
                 sep = get_sep(storage['Out_Sep'][1])
 
-                                
+                
+                outvars=["Text_1","Text_2","Overlap"]
+                if sh == '2':
+                    outvars += ["Share_1","Share_2"]
+                    tid = {}
+                    for i in range(len(storage["Data"][storage["NGS_Tid"][1]])): ##indexing text numbers
+                        tid[storage["Data"][storage["NGS_Tid"][1]][i]] = i
+                        
+                outdic = {}
+                for v in outvars:
+                    outdic[v] = []
 
+                texts = sorted(list(tm.keys()))
+
+                max1 = len(texts)
+                if sym=="1":max1=max1-1
+                for ti1 in range(max1):
+                    min2=0
+                    if sym=="1": min2=ti1+1
+                    for ti2 in range(min2,len(texts)):
+                        if tm[texts[ti1]][texts[ti2]]>minover:
+                            outdic["Text_1"].append(texts[ti1])
+                            outdic["Text_2"].append(texts[ti2])
+                            outdic["Overlap"].append(tm[texts[ti1]][texts[ti2]])
+
+                            if sh == '2':
+                                i1 = tid[texts[ti1]]
+                                i2 = tid[texts[ti2]]
+                                l1 = len(naive_tokenizer(storage["Data"][storage["NGS_Fulltext"][1]][i1]))
+                                l2 = len(naive_tokenizer(storage["Data"][storage["NGS_Fulltext"][1]][i2]))
+                                print(i1,i2,l1,l2)
+
+                                outdic["Share_1"].append(tm[texts[ti1]][texts[ti2]]/l1)
+                                outdic["Share_2"].append(tm[texts[ti1]][texts[ti2]]/l2)
+
+                t = write_data(outdic,outvars,outfile,header,sep)
+                verbout('\n'+t[0],master=self)
+
+                
+                self.clean_up_all()
+                prog_pos = 'otherart'
+                self.ask()
                 
 
 ######################################################## Add Populism               
@@ -6149,8 +6224,7 @@ class Anzeige(Frame):
                 
             except Exception as fehler:
                 verb('No valid time format yet ('+v+'/'+f+')')
-                #print(str(fehler))
-
+                verb(str(fehler))
             
         else:
             verb('Error: RB-Tamper not defined for this page.')
@@ -8141,8 +8215,6 @@ class Anzeige(Frame):
                 c_elements[c] = {}
                 c_elements[c]['Cluster']=cluster_num
                 c_elements[c]['Color']=cluster_col
-
-        #print(baum_schreiben(c_elements))
         
         self.infobox = Toplevel(self)
         self.infobox.rowconfigure(1, weight=1)
@@ -9459,7 +9531,7 @@ def artikelholen(ID): ##Get a text from the folder specified
         verb(art_filen)
     except IOError:
         at = "-"
-        #print(art_filen)
+
     except:
         ##print("EXCEPTIONAL ERROR WHEN LOADING ARTICLE: "+ID)
         pass
@@ -9529,7 +9601,7 @@ def get_codebook(filename): ##Load the codebook from a given file. Returns a cod
             verb(varname+optout)
 
             if varname in cb.keys():
-                print('ERROR: Variable "'+varname+'" already defined. Overwriting previous variable')
+                verb('ERROR: Variable "'+varname+'" already defined. Overwriting previous variable')
 
             cb[varname] = []
             cb[varname].append(varfrage) #codebook['variabel'][0] is the question as string (including final linebreak)
@@ -10675,10 +10747,8 @@ def heat_color(sval,mode='bw'): ##Return a color value from a float in range [0;
         v = int(sval * 255)
         if v > 255:
             v = 255
-            #print('ERROR: Value too high'+str(sval))
         if v < 0:
             v = 0
-            #print('ERROR: Value too low'+str(sval))
 
         hn = hex(v)[2:]
         if len(hn)==1:
@@ -10688,10 +10758,8 @@ def heat_color(sval,mode='bw'): ##Return a color value from a float in range [0;
         v = int(sval * 255)
         if v > 255:
             v = 255
-            #print('ERROR: Value too high'+str(sval))
         if v < 0:
             v = 0
-            #print('ERROR: Value too low'+str(sval))
 
         v = 255-v
         hn = hex(v)[2:]
@@ -10705,24 +10773,19 @@ def heat_color(sval,mode='bw'): ##Return a color value from a float in range [0;
         rv = int(rval * 255)
         if rv > 255:
             rv = 255
-            #print('ERROR: Value too high'+str(rval))
         if rv < 0:
             rv = 0
-            #print('ERROR: Value too low'+str(rval))
         gv = int(gval * 255)
         if gv > 255:
             gv = 255
-            #print('ERROR: Value too high'+str(gval))
         if gv < 0:
             gv = 0
-            #print('ERROR: Value too low'+str(gval))
         bv = int(bval * 200)
         if bv > 255:
             bv = 255
-            #print('ERROR: Value too high'+str(bval))
         if bv < 0:
             bv = 0
-            #print('ERROR: Value too low'+str(bval))
+
 
         rn = hex(rv)[2:]
         if len(rn)==1:
@@ -10867,7 +10930,6 @@ def calc_entropy(liste,maxliste=[]): ##Caluclate the entropy of a list (with or 
             if e in table.keys():
                 table[e] = table[e] + 1
             else:
-                #print('Error: Element should not exist: '+e)
                 pass
         for e in maxliste:
             table[e] = float(table[e])/len(liste)
@@ -11591,7 +11653,7 @@ def bereinigen(uml_string, lc=0,lb=0,uml=0,encod='latin-1'):
                 ausgabe = ausgabe + replace[ord(i)][uml]
             else:
                 ausgabe = ausgabe + '<ORD:' + str(ord(i)) +'>'
-                #print('Unknown Character: '+ str(ord(i))+' in: '+ausgabe,0)
+
         if lc == 1:
             ausgabe = ausgabe.lower()
     return str(ausgabe)
@@ -12140,7 +12202,7 @@ def svm_prf(scores,true):
         if scores[i] < 0 and true[i] == 1: fn+=1
         if scores[i] >= 0 and true[i] == 0: fp+=1
         if scores[i] >= 0 and true[i] == 1: tp+=1
-    #print(tp,tn,fp,fn)
+
     try:
         precision = tp/(tp+fp)
     except:
@@ -12153,7 +12215,7 @@ def svm_prf(scores,true):
         f = 2*precision*recall/(precision+recall)
     else:
         f = 0.0
-    #print(precision,recall,f)
+
     return [precision,recall,f]
 
 def svm_prf_curve(tdm, rvec, classvec):
@@ -12204,8 +12266,6 @@ def train_svm(tdm, classvec,master=''):
         else: ## Categorizes 1 versus all other
             clist[0].append(i)
 
-    #print(clist)
-
     rvec  ={'Intercept':0.0}
 
     for t in terms:
@@ -12227,15 +12287,13 @@ def train_svm(tdm, classvec,master=''):
                 try:
                     rvec[t] += tdm[t][c1] - tdm[t][c0]
                 except:
-                    print('Fehler',c1,c0,t)
+                    verbout('Fehler',c1,c0,t,master)
     ranking = []
     for term in terms:
         rvec[term] = rvec[term]/npairs
         ranking.append((abs(rvec[term]/stats[term]['SD']),term))
 
     ranking = sorted(ranking, reverse=True)
-    #print(rvec)
-    #print(ranking)
 
     verbout("\n\nFound Vector between 0 and 1. Highest values (first 20): ",master=master)
     for e in ranking[:20]:
@@ -12309,6 +12367,24 @@ def train_svm(tdm, classvec,master=''):
 
 #### Ngram Shingling
 
+def naive_tokenizer(line, num=0):
+    line = line.lower()
+    allowed = [' ','a','b','c','d','e','f','g','h','i','j','k','l',
+               'm','n','o','p','q','r','s','t','u','v','w','x','y','z']
+    if num == 1:
+        allowed = allowed + ['1','2','3','4','5','6','7','8','9','0']
+    outline = ''
+    for c in line:
+        if c in allowed:
+            outline = outline + c
+
+    outline = outline.split(' ')
+    while '' in outline:
+        outline.remove('')
+
+    return outline
+
+
 def nghash(ngram,ns=5):
     l = len(ngram)
     step = int(l/ns)
@@ -12347,73 +12423,49 @@ def shinglehash(line,tid='none',prev={},ng=5):
     return outdic
 
 
-def hash_texts(tid,fulltext,mode=1,ngl=5):
+def hash_texts(tid,fulltext,mode=1,ngl=5,master=''):
     all_hashes = {}
+
+    step = int(len(tid)/40)
+    panz = 1
+    if step<1:
+        panz = 2 ##approximation which will never be used
+        step = 1
+    verbout('\n\nHashing Texts:\n0%-------25%-------50%-------75%-------100%\n','progress',master=master)
+
     for i in range(len(tid)):
         all_hashes = shinglehash(fulltext[i],tid[i],all_hashes,ngl)
+        if i%step==0: verbout(".","progress",master=master)
+
+    verbout("\nHashes prepared. Removing hashes only occurring once or in >10% of texts...",master=master)
+    maxtexts = int(0.1*len(tid))
 
     if mode == 1:
         remkey = []
         for k in all_hashes.keys():
-            if len(all_hashes[k])==1 or len(all_hashes[k])>5:
+            if len(all_hashes[k])==1 or len(all_hashes[k])>maxtexts:
                 remkey.append(k)
+        verbout("\nRemoving "+str(len(remkey))+" hashes",master=master)
         for r in remkey:
             del all_hashes[r]
 
+    verbout("\nReturning "+str(len(all_hashes.keys()))+" relevant hashes",master=master)
+
     return all_hashes
 
+def duplicate_shingling(tdata,idvar,tvar,ngl=5,master=''):
+    sh = hash_texts(tdata[0][idvar],tdata[0][tvar],1,ngl,master)
 
-def text_compare(tids, texts,minlen=20):
-    t1 = ' '.join(naive_tokenizer(texts[0]))
-    t2 = ' '.join(naive_tokenizer(texts[1]))
-
-    cpos = 0
-    overlaps = {}
-    len_overlap = 0
-    t_overlap = []
-    while cpos < len(t1)-minlen:
-        c = t2.find(t1[cpos:cpos+minlen])
-        elon = minlen
-        c2 = 0
-        while cpos + elon < len(t1) and not c == -1:
-            c2 = c
-            elon = elon + 1
-            c = t2.find(t1[cpos:cpos+elon])
-
-        if elon > minlen:
-            elon = elon-1
-            overlaps[str(cpos)] = {'Text':t1[cpos:cpos+elon],
-                                   'Start1':cpos,
-                                   'End1':cpos+elon,
-                                   'Start2':c2,
-                                   'End3':c2+elon,
-                                   'Len':elon}
-            len_overlap = len_overlap +elon
-            t_overlap.append(t1[cpos:cpos+elon])
-            cpos = cpos + elon
-        cpos = cpos + 1
-
-    #print baum_schreiben(overlaps)
-    s1 = float(len_overlap)/len(t1)
-    s2 = float(len_overlap)/len(t2)
-    s = float(len_overlap*2)/(len(t1)+len(t2))
-    outdic = {'Share1':s1,'Share2':s2,'Overlap':s,'Text':t_overlap}
-    return outdic                            
-
-
-
-
-
-def duplicate_shingling(tdata,idvar,tvar,ngl=5,minover=20,do_compare=1):
-    sh = hash_texts(tdata[0][idvar],tdata[0][tvar])
-    #print baum_schreiben(sh)
-
+    verbout("\n\nPreparing Overlap Matrix..",master=master)
     textmatrix = {}
-    for t1 in tdata[0][idvar]:
+    texts = tdata[0][idvar]
+
+    for t1 in texts:
         textmatrix[t1] = {}
         for t2 in tdata[0][idvar]:
             textmatrix[t1][t2] = 0
 
+    maxover = 0
     for dupli in sh.keys():
         aff_texts = {}
         for e in sh[dupli]:
@@ -12425,35 +12477,34 @@ def duplicate_shingling(tdata,idvar,tvar,ngl=5,minover=20,do_compare=1):
             for t1 in at:
                 for t2 in at:
                     if not t1 == t2:
-                        textmatrix[t1][t2] = textmatrix[t1][t2] + 1
+                        textmatrix[t1][t2] += 1
+                        if textmatrix[t1][t2]>maxover:
+                            maxover = textmatrix[t1][t2]
+    verbout("\nDone. Maximal overlap between two texts: "+str(maxover)+" hashes.",master=master)
 
-    odic = {'Text1':[],'Text2':[],'Overlap':[],'Share1':[],'Share2':[],'Text':[]}
+    distr = {}
+    for i in range(maxover+1):
+        distr[i] = 0
+    for t1 in texts:
+        for t2 in texts:
+            if not t1==t2:
+                distr[textmatrix[t1][t2]] +=1
 
-    ndupli =0
+    displim = 30
+    if maxover<displim:displim=maxover
 
-    for i1 in range(0,len(tdata[0][idvar])):
-        for i2 in range(i1+1,len(tdata[0][idvar])):
-            t1 = tdata[0][idvar][i1]
-            t2 = tdata[0][idvar][i2]
-    ##        if textmatrix[t1][t2] > 0:
-    ##            print t1, t2, textmatrix[t1][t2]
+    dtab = {'N_Overlap':{},'N_Pairs':{}}
+    rn=[]
 
-            if textmatrix[t1][t2] > 5:
-                ndupli = ndupli+1
-                #print t1,t2
+    for i in range(displim):
+        dtab['N_Overlap'][str(i)]=i
+        dtab['N_Pairs'][str(i)]=distr[i]/2
+        rn.append(str(i))
 
-                if do_compare == 1:
-                    comparison = text_compare([t1,t2],[tdata[0][tvar][i1],tdata[0][tvar][i2]],minover)
+    verbout("\nDistribution of overlapping hashes up (max 30 overlaps):\n",master=master)
+    verbout(display_table(dtab,rows_pre=rn,cols_pre=['N_Overlap','N_Pairs']),'table',master=master)
 
-                    #print i1,t1,t2,comparison['Overlap']
-                    odic['Text1'].append(t1)
-                    odic['Text2'].append(t2)
-                    odic['Overlap'].append(comparison['Overlap'])
-                    odic['Share1'].append(comparison['Share1'])
-                    odic['Share2'].append(comparison['Share2'])
-                    odic['Text'].append(' / '.join(comparison['Text']))
-
-    return odic
+    return textmatrix
     #return ndupli
 
 
@@ -13650,8 +13701,6 @@ def find_sequence(data,svar,tvar='tmp_Time',gvar='tmp_Group',slen=4,somit=1,mode
         except:
             mode = 1
 
-    #print([somit])
-
     seq_vars = []
     seq_collection = []
     slen = str(slen)
@@ -13725,8 +13774,6 @@ def find_sequence(data,svar,tvar='tmp_Time',gvar='tmp_Group',slen=4,somit=1,mode
 
     out_data = {}
     seq_vars = get_unique(seq_vars)
-
-    #print([mode],type(mode))
 
     if mode == 1:
         verbout('\n\nExporting in long format:\n',master=master)
@@ -13917,7 +13964,7 @@ def mpdetection(seq,pat,minlen=5,maxlen=30,master=''):
     lenlist = [] ##Length of optimal match
     
     for i in range(len(seq[0])):
-        #print(i,step,i%step)
+
         if i%step == 0:verbout('.','progress',master=master)
         if i > len(seq[0])-minlen-1:
             outlist.append(0)
@@ -14203,12 +14250,12 @@ def event_agreement(l1,l2,lag,meas):
             p0 = 1-p1
             pc = p1**2+p0**2
             a = float(crosstab['a']+crosstab['b'])/comp
-            print(pc,a)
+            verb(pc,a)
             if pc < 1:
                 agreement = (a-pc)/(1-pc)
             else:
                 agreement = 1.0
-            print(agreement)
+            verb(agreement)
 
     return agreement
 
@@ -14225,7 +14272,7 @@ def event_agree_overall(ad):
 
 
 def synch_move(ad,v,l):
-    print('Moving vector '+v+' by '+str(l)+' Frames')
+    verb('Moving vector '+v+' by '+str(l)+' Frames')
     vectors = sorted(list(ad.keys()))
 
     for v1 in vectors:
@@ -14240,11 +14287,9 @@ def synch_move(ad,v,l):
                 for lag in ad[v1][v2].keys():
                     try:
                         ad[v1][v2][lag] = values[lag+shift]
-                        #print(lag,values[lag-shift])
+
                     except:
                         ad[v1][v2][lag] = ''
-                        #print('No value at ',[lag-shift])               
-    #print(baum_schreiben(ad))
     return ad
 
 
@@ -14269,7 +14314,7 @@ def synch_wiggle(ad,master=''):
                     pass
 
             ma = ma/(len(vectors)-1)
-            print('Initial agreement for '+v+': '+str(ma))
+            #print('Initial agreement for '+v+': '+str(ma))
 
             pf = sorted(list(ad[v][v].keys()))
             ranking = []
@@ -14285,8 +14330,8 @@ def synch_wiggle(ad,master=''):
                 if invalid == 0:
                     ranking.append((ma,l))
 
-            print(ranking)
-            print(max(ranking))
+            #print(ranking)
+            #print(max(ranking))
 
             if not max(ranking)[1] == 0:
                 ad = synch_move(ad,v,max(ranking)[1])
@@ -14327,15 +14372,13 @@ def synch_events(data,varlist,frame,meas,master=''):
             agree_dic[p[0]][p[1]][lag] = a
             agree_dic[p[1]][p[0]][-lag] = a
 
-        #print(p,optlag,round(maxa,2))
-
-    print(baum_schreiben(agree_dic))
+    #print(baum_schreiben(agree_dic))
     overall = event_agree_overall(agree_dic)
     verbout('\nOverall Agreement: '+str(round(overall[0],3))+' (SD='+str(round(overall[1],3))+')',master=master)
 
     agree_dic = synch_wiggle(agree_dic,master=master)
 
-    print(baum_schreiben(agree_dic))
+    #print(baum_schreiben(agree_dic))
     verbout('\nWiggling Complete.',master=master)
     overall = event_agree_overall(agree_dic)
     verbout('\n\nOverall Agreement: '+str(round(overall[0],3))+' (SD='+str(round(overall[1],3))+')',master=master)
@@ -14355,7 +14398,7 @@ def synch_events(data,varlist,frame,meas,master=''):
         outdic[v] = []
 
     ldata = data_dim(data)[1]
-    print(ldata)
+    #print(ldata)
 
     for i in range(-maxshift,ldata-minshift):
         for v in varlist:
@@ -14368,8 +14411,6 @@ def synch_events(data,varlist,frame,meas,master=''):
     return [outdic,varlist]
 
         
-
-
 ##########################
 ##
 ## Merge Tables
@@ -14455,10 +14496,10 @@ def merge_data(data,keyvars,schldic,vadd=[],vretain=[],master=''):
 
     if vadd == []:
         vadd = schldic[list(schldic.keys())[0]].keys()
-        #print(' - No variables declared for merge. Taking all of them: '+str(vadd))
+
     if vretain == []:
         vretain = sorted(data.keys())
-        #print(' - No variable order declared. Sorting them: '+str(vadd))
+
 
     tmp = {}
     for v in vadd:
@@ -15321,7 +15362,6 @@ def distance(list1,list2,uni=0):
             dist = dist + (l1[i]-l2[i])**2
         dist = dist**0.5  
     else:
-        #print('ERROR in distance(): Lists have different lengths')
         dist = -1
 
     return dist
@@ -16007,7 +16047,6 @@ def create_coding_dic(data,uvar,cvar,varlist,unitlist=[],master=''): ##Reliabili
         panz = int(40.0/len(pairs))
 
     for i in range(len(data[uvar])):
-        #print(i)
         if i%step==0:verbout('.'*panz,'progress',master=master)
         c = data[cvar][i]
         u = data[uvar][i]
@@ -16799,8 +16838,6 @@ def reltest(codings,tvars,units,coders,kerncod='no_core',methods=['PA'],options=
                         uinfo[u]['Modi'][v] = [codings[u][kerncod][v],1]
                     except:
                         uinfo[u]['Modi'][v] = ['invalid',0]
-
-        #print(baum_schreiben(uinfo))
 
         total_coders = {}
         total_coders['Lotus_c'] = {}
@@ -20795,7 +20832,6 @@ def reformat_mediause(data,master=''):
             fullfreq = mfreq + mfreq2
             if fullfreq > 7: fullfreq = 7.0
             if mfreq2 > 0:
-                #print('New frequency for respondent '+str(i)+' on medium '+str(m)+'. Was '+str(mfreq)+', now is '+str(fullfreq))
                 pass
 
             data[m].append(fullfreq)
