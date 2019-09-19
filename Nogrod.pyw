@@ -17,10 +17,18 @@
 
 from __future__ import print_function
 
+try:
+    from openpyxl import Workbook
+    from openpyxl import load_workbook
+    xlsx = 1
+except:
+    xlsx = 0
+
 try: ##if Python Version 3.x
     from tkinter import *
     from tkinter import messagebox
     from tkinter import filedialog
+    from tkinter import simpledialog
     py_version = 3
 except: ##If Python Version 2.7
     from Tkinter import *
@@ -32,6 +40,8 @@ import math
 import random
 import unicodedata
 import os
+
+
 
 #print(os.getcwd())
 
@@ -149,7 +159,15 @@ class Anzeige(Frame):
         for v in sorted(codebook.keys()):
             verb(v+'; ',nl=0)
         verb('\n'+str(len(codebook.keys()))+'Variables in Codebook.')
-               
+
+        ## Add Excel functionality if openpyxl was loaded correctly
+        if settings['Excel']==1:
+            codebook["In_Sep"][3].append("5")
+            codebook["In_Sep"][2].append("Excel Spreadsheet")
+            codebook["Out_Sep"][3].append("5")
+            codebook["Out_Sep"][2].append("Excel Spreadsheet")
+
+            
 
         storage = {}
         storage['Breaks'] = 0
@@ -985,12 +1003,17 @@ class Anzeige(Frame):
         elif prog_pos == 'svmt_opt':
             self.question_dd('Univ_Lang',1)
             self.question_dd('Univ_Length',2)
-            self.question_dd('SVM_Sparse',3)        
+
 
         elif prog_pos == 'svmt_model':
-            self.question_file('SVM_Model',1)
+            self.question_file('SVM_Model',1,defext='.json')
             self.question_dd('SVM_Type',2)
             self.question_txt('SVM_Newvar',3)
+
+        elif prog_pos == 'svmt_try':
+            self.buttons(0,0,0,0)
+            self.question_txt('SVM_Adjust',1)
+            self.question_bt('SVM_Tryout',2)
 
         elif prog_pos == 'svmt_out':
             self.question_file('SVM_Outtable',1,'save')
@@ -998,6 +1021,114 @@ class Anzeige(Frame):
             self.question_dd('Out_Sep',3)            
 
 
+        elif prog_pos == 'svma_in1':
+            self.question_file('SVMA_Input',1)
+            self.question_dd('In_Sep',2)
+            self.question_dd('In_Header',3)
+
+        elif prog_pos == 'svma_var':
+            self.question_dd('SVM_Textvar',1)
+
+        elif prog_pos == 'svma_in2':
+            self.question_file('SVMA_Folder',1,'folder')
+            self.question_dd('Encoding',2)
+            self.question_dd('Corpus_Subdir',3)
+
+        elif prog_pos == 'svma_opt':
+            self.question_dd('Univ_Lang',1)
+            self.question_dd('Univ_Length',2)
+
+        elif prog_pos == 'svma_model':
+            self.question_file('SVM_Model',1,defext='.json')
+            self.question_dd('SVM_Type',2)
+            self.question_txt('SVM_Newvar',3)
+
+        elif prog_pos == 'svma_out':
+            self.question_file('SVM_Outtable',1,'save')
+            self.question_dd('Out_Header',2)
+            self.question_dd('Out_Sep',3)       
+
+
+######################### NBC
+
+
+        elif prog_pos == 'nbc_in':
+            self.question_file('SVM_Input',1)
+            self.question_dd('In_Sep',2)
+            self.question_dd('In_Header',3)
+
+        elif prog_pos == 'nbc_vars':
+            self.question_dd('SVM_Textvar',1)
+            self.question_dd('SVM_Classvar',2)
+
+        elif prog_pos == 'nbc_opt':
+            self.question_dd('Univ_Lang',1)
+            self.question_dd('Univ_Length',2)
+            self.question_dd('SVM_Sparse',3)
+
+        elif prog_pos == 'svm_out':
+            self.question_file('NBC_Out',1,'save')
+
+
+        elif prog_pos == 'nbct_in':
+            self.question_file('SVM_Input',1)
+            self.question_dd('In_Sep',2)
+            self.question_dd('In_Header',3)
+
+        elif prog_pos == 'nbct_vars':
+            self.question_dd('SVM_Textvar',1)
+            self.question_dd('SVM_Classvar',2)
+
+        elif prog_pos == 'nbct_opt':
+            self.question_dd('Univ_Lang',1)
+            self.question_dd('Univ_Length',2)
+
+
+        elif prog_pos == 'nbct_model':
+            self.question_file('NBC_Model',1,defext='.json')
+            self.question_dd('NBC_Type',2)
+            self.question_txt('SVM_Newvar',3)
+
+
+
+##        elif prog_pos == 'svmt_try':
+##            self.buttons(0,0,0,0)
+##            self.question_txt('SVM_Adjust',1)
+##            self.question_bt('SVM_Tryout',2)
+##
+##        elif prog_pos == 'svmt_out':
+##            self.question_file('SVM_Outtable',1,'save')
+##            self.question_dd('Out_Header',2)
+##            self.question_dd('Out_Sep',3)            
+##
+##
+##        elif prog_pos == 'svma_in1':
+##            self.question_file('SVMA_Input',1)
+##            self.question_dd('In_Sep',2)
+##            self.question_dd('In_Header',3)
+##
+##        elif prog_pos == 'svma_var':
+##            self.question_dd('SVM_Textvar',1)
+##
+##        elif prog_pos == 'svma_in2':
+##            self.question_file('SVMA_Folder',1,'folder')
+##            self.question_dd('Encoding',2)
+##            self.question_dd('Corpus_Subdir',3)
+##
+##        elif prog_pos == 'svma_opt':
+##            self.question_dd('Univ_Lang',1)
+##            self.question_dd('Univ_Length',2)
+##
+##        elif prog_pos == 'svma_model':
+##            self.question_file('SVM_Model',1,defext='.json')
+##            self.question_dd('SVM_Type',2)
+##            self.question_txt('SVM_Newvar',3)
+##
+##        elif prog_pos == 'svma_out':
+##            self.question_file('SVM_Outtable',1,'save')
+##            self.question_dd('Out_Header',2)
+##            self.question_dd('Out_Sep',3)       
+                
 
 
 ############## Duplicate analysis (N-Gram Shingling)
@@ -1500,11 +1631,17 @@ class Anzeige(Frame):
                     self.verbout('New Procedure: Test Support Vector Machine\n-------------------------\n')
                     prog_pos = 'svmt_in'
                     self.ask()                  
-                elif m == 'SVM_Apply':
+                elif m == 'SVM_Apply1':
                     verb('----Choice: Train SVM')
                     self.anzeigen()
-                    self.verbout('New Procedure: Apply Support Vector Machine\n-------------------------\n')
-                    prog_pos = 'svma_in'
+                    self.verbout('New Procedure: Apply Support Vector Machine to Corpus\n-------------------------\n')
+                    prog_pos = 'svma_in1'
+                    self.ask()                  
+                elif m == 'SVM_Apply2':
+                    verb('----Choice: Train SVM')
+                    self.anzeigen()
+                    self.verbout('New Procedure: Apply Support Vector Machine to Directory\n-------------------------\n')
+                    prog_pos = 'svma_in2'
                     self.ask()                  
                 elif m == 'Tool1':
                     verb('----Choice: TDM')
@@ -5185,32 +5322,74 @@ class Anzeige(Frame):
                         verbout('\n   '+k+': '+"{0:.4f}".format(rvec[k]),'table',self)
                     verbout('\n',master=self)
                     self.clean_up_all()
-                    prog_pos = 'svmt_out'
+                    def_val["SVM_Adjust"]=rvec["Intercept"]
+
+                    verbout("\n\nGenerating Term-Document Matrix and visualizing test results",master=self)
+
+                    storage['TDM']=generate_tdm(storage['Data'][storage['SVM_Textvar'][1]],
+                                                lang=storage['Univ_Lang'][1],
+                                                sparsity=0,
+                                                ngrams=int(storage['Univ_Length'][1]),
+                                                universe=list(rvec.keys()),master=self)
+                    
+                    curve = svm_prf_curve(storage['TDM'], rvec, storage['Classvector']) ##Creates a dataset with PRF values for all possible intercepts.
+                    self.display_line_plot({'X':curve[0]['Intercept'],'Y':list(zip(curve[0]['Precision'],curve[0]['Recall'],curve[0]['F_Score'])),
+                                            'Title':'Precision (black), Recall (blue) and F (red) in relation to Intercept','Type':'Line'})
+
+                    prog_pos = 'svmt_try'
                     self.ask()
                 else:
                     verbout('\nERROR: not a valid SVM model','warning',self)
+
+            elif prog_pos == 'svmt_try':
+                self.store_var_all()
+                accept = 0
+                try:
+                    storage['SVM_Adjust'] = float(storage['SVM_Adjust'])
+                    accept = 1
+                except:
+                    self.message("Invalid-Selection07")
+
+
+                if accept == 1:
+                    tdm = storage['TDM']
+                    classvec = storage['Classvector']
+                    rvec = storage['SVM_Hyperplane']
+                    rvec['Intercept']=storage['SVM_Adjust']                    
+
+                    if overspill == "try":
+                        scores = svm_scores(tdm, rvec)
+                        prf = svm_prf(scores,classvec)
+
+                        verbout('\n\nTrial completed. Accuracy for test corpus with intercept='+str(storage['SVM_Adjust'])+':',master=self)
+                        verbout('\nPrecision: '+"{0:.3f}".format(prf[0]),'table',master=self)
+                        verbout('\nRecall:    '+"{0:.3f}".format(prf[1]),'table',master=self)
+                        verbout('\nF-Score:   '+"{0:.3f}".format(prf[2]),'table',master=self)
+                        verbout('\n',master=self)
+                    elif overspill == "test":
+                        storage['SVM_Hyperplane']['Intercept']=storage['SVM_Adjust']
+                        strain = open(storage['SVM_Model'],"w")
+                        strain.write(str(storage['SVM_Hyperplane']))
+                        strain.close()
+                        verbout('\nHyperplane with adjusted intercept written: '+storage['SVM_Model']+'\n',master=self)
+
+                        self.clean_up_all()
+                        prog_pos = 'svmt_out'        
+                        self.ask()
 
 
             elif prog_pos == 'svmt_out':
                 self.store_var_all()
                 data = storage['Data']
                 vlist = storage['D_Var']
-                lang = storage['Univ_Lang'][1]
-                ngrams = int(storage['Univ_Length'][1])
-                spars = int(storage['SVM_Sparse'][1])
-                sparsity = [float(spars)/100,1-float(spars)/100]
-                textvar = storage['SVM_Textvar'][1]
                 classvec = storage['Classvector']
                 newvar = storage['SVM_Newvar']
                 rvec = storage['SVM_Hyperplane']
+
                 outfile = make_fname(storage['SVM_Outtable'])
                 header = int(storage['Out_Header'][1])
                 sep = get_sep(storage['Out_Sep'][1])
-
-                universe = list(rvec.keys())
-
-                tdm = generate_tdm(data[textvar],lang=lang,ngrams=ngrams,sparsity=sparsity,universe=universe,master=self)
-                del tdm['res_Document'] ##Remove document name from feature list
+                tdm = storage['TDM']
 
                 scores = svm_scores(tdm, rvec)
                 prf = svm_prf(scores,classvec)
@@ -5221,11 +5400,15 @@ class Anzeige(Frame):
                 verbout('\nF-Score:   '+"{0:.3f}".format(prf[2]),'table',master=self)
                 verbout('\n',master=self)
 
-                curve = svm_prf_curve(tdm, rvec, classvec) ##Creates a dataset with PRF values for all possible intercepts.
+                if storage['SVM_Type'][1] == '2': #Make Dichotomous
+                    dscore = []
+                    for s in scores:
+                        if s<0:
+                            dscore.append(0)
+                        else:
+                            dscore.append(1)
+                    scores = dscore
 
-                self.display_line_plot({'X':curve[0]['Intercept'],'Y':list(zip(curve[0]['Precision'],curve[0]['Recall'],curve[0]['F_Score'])),
-                                        'Title':'Precision (black), Recall (blue) and F (red) in relation to Intercept','Type':'Line'})
-                
                 data[newvar] = scores
                 vlist.append(newvar)
                 t = write_data(data,vlist,outfile,header,sep)
@@ -5237,29 +5420,179 @@ class Anzeige(Frame):
                 self.ask()                
 
 
-################ Duplicate analysis (N-Gram Shingling)
-##
-##        elif prog_pos == 'dupli_in1':
-##            self.question_file('NGS_Input',1)
+##        elif prog_pos == 'svma_in1':
+##            self.question_file('SVMA_Input',1)
 ##            self.question_dd('In_Sep',2)
 ##            self.question_dd('In_Header',3)
 ##
-##        elif prog_pos == 'dupli_var':
-##            self.question_dd('NGS_Fulltext',1)
-##            self.question_dd('NGS_Tid',2)
-##            
-##        elif prog_pos == 'dupli_in2':
-##            self.question_file('Corpus_Indic',1,'folder')
+##        elif prog_pos == 'svma_var':
+##            self.question_dd('SVM_Textvar',1)
+##
+##        elif prog_pos == 'svma_in2':
+##            self.question_file('SVMA_Folder',1,'folder')
 ##            self.question_dd('Encoding',2)
 ##            self.question_dd('Corpus_Subdir',3)
-##        
 ##
-##        elif prog_pos == 'dupli_opt':
-##            self.question_dd('NGS_Nglen',1)
-##            self.question_dd('NGS_Overlap',2)
+##        elif prog_pos == 'svma_opt':
+##            self.question_dd('Univ_Lang',1)
+##            self.question_dd('Univ_Length',2)
 ##
-##        elif prog_pos == 'svm_out':
-##            self.question_file('NGS_Out',1,'save')
+##        elif prog_pos == 'svma_model':
+##            self.question_file('SVM_Model',1,defext='.json')
+##            self.question_dd('SVM_Type',2)
+##            self.question_txt('SVM_Newvar',3)
+##
+##        elif prog_pos == 'svmt_out':
+##            self.question_file('SVM_Outtable',1,'save')
+##            self.question_dd('Out_Header',2)
+##            self.question_dd('Out_Sep',3)       
+##                
+
+
+            elif prog_pos == 'svma_in1':
+                fname = self.store_var('SVMA_Input')
+                header = self.store_var('In_Header')[1]
+                sep = get_sep(self.store_var('In_Sep')[1])
+                verbout('\nCorpus location: '+fname, master=self)
+
+                verbout('\nLoading file: '+fname, master=self)
+                dset = self.load_dset(fname,header,sep,'Data','D_Var','Main_Table')
+                if not dset == 0:
+                    add_varlist('SVM_Textvar',dset[1],excludes=[])
+                    self.clean_up_all()
+                    prog_pos = 'svma_var'
+                    self.ask()
+                else:
+                    verb('ERROR: Invalid File')
+
+            elif prog_pos == 'svma_var':
+                self.store_var_all()
+                self.clean_up_all()                
+                prog_pos = 'svma_opt'
+                self.ask()
+
+            elif prog_pos == 'svma_in2':
+                self.store_var_all()
+                self.clean_up_all()       
+
+                path = storage['SVMA_Folder']
+                subd = storage['Corpus_Subdir'][1]
+                encod = storage['Encoding'][1]
+
+                self.verbout('\nCreating corpus from textfiles. This may take some minutes...\n')
+                path = path.replace('/','\\')
+
+                if subd == '0':
+                    comm = 'dir "'+path+'\\*.txt" /b >temp_dir.txt'
+                    fpath = path+'\\'
+                else:
+                    comm = 'dir "'+path+'\\*.txt" /b /s >temp_dir.txt'
+                    fpath = ''
+                os.system(comm)
+
+                liste = "not ready"
+                while liste == "not ready":
+                    try:
+                        inf = open("temp_dir.txt","r")
+                        liste = inf.readlines()
+                        inf.close()
+                        os.system("del temp_dir.txt")
+                    except:
+                        liste = "not ready"
+
+                idvar = "Text_ID"
+                nvar = "Fulltext"
+
+                corpus = {idvar:[]}
+                for l in liste:
+                    corpus[idvar].append(l[:-1])
+
+                outdset = create_corpus([corpus,[idvar]],fpath,idvar,nvar,encod,master=self)
+
+                storage["Data"] = outdset[0]
+                storage["D_Var"] = outdset[1]
+                storage["SVM_Textvar"] = (nvar,nvar)
+                
+                self.clean_up_all()
+                prog_pos = 'svma_opt'
+                self.ask()
+
+            
+            elif prog_pos == 'svma_opt':
+                self.store_var_all()
+                self.clean_up_all()                
+                prog_pos = 'svma_model'
+                self.ask()
+
+
+            elif prog_pos == 'svma_model':
+                self.store_var_all()
+                strain = open(storage['SVM_Model'],'r')
+                sl = strain.readlines()
+                strain.close()
+                sl = " ".join(sl)
+                sl = sl.replace('\n','')
+                try:
+                    rvec = eval(sl)
+                except:
+                    rvec = {}
+
+                if len(rvec.keys()) > 1:
+                    storage['SVM_Hyperplane'] = rvec
+                    verbout('\n\nModel loaded: ',master=self)
+                    for k in sorted(rvec.keys()):
+                        verbout('\n   '+k+': '+"{0:.4f}".format(rvec[k]),'table',self)
+                    verbout('\n',master=self)
+                    self.clean_up_all()
+
+                    storage['TDM']=generate_tdm(storage['Data'][storage['SVM_Textvar'][1]],
+                                                lang=storage['Univ_Lang'][1],
+                                                sparsity=0,
+                                                ngrams=int(storage['Univ_Length'][1]),
+                                                universe=list(rvec.keys()),master=self)
+                    
+                    prog_pos = 'svma_out'
+                    self.ask()
+                else:
+                    verbout('\nERROR: not a valid SVM model','warning',self)
+
+
+            elif prog_pos == 'svma_out':
+                self.store_var_all()
+                data = storage['Data']
+                vlist = storage['D_Var']
+                newvar = storage['SVM_Newvar']
+                rvec = storage['SVM_Hyperplane']
+
+                outfile = make_fname(storage['SVM_Outtable'])
+                header = int(storage['Out_Header'][1])
+                sep = get_sep(storage['Out_Sep'][1])
+                tdm = storage['TDM']
+
+                scores = svm_scores(tdm, rvec)
+                if storage['SVM_Type'][1] == '2': #Make Dichotomous
+                    dscore = []
+                    for s in scores:
+                        if s<0:
+                            dscore.append(0)
+                        else:
+                            dscore.append(1)
+                    scores = dscore
+
+                data[newvar] = scores
+                vlist.append(newvar)
+                t = write_data(data,vlist,outfile,header,sep)
+                
+                verbout('\n'+t[0],master=self)
+
+                self.clean_up_all()
+                prog_pos = 'otherart'
+                self.ask()                
+
+
+
+
+################ Duplicate analysis (N-Gram Shingling)
 
 
             elif prog_pos == 'dupli_in1':
@@ -5415,7 +5748,6 @@ class Anzeige(Frame):
                 t = write_data(outdic,outvars,outfile,header,sep)
                 verbout('\n'+t[0],master=self)
 
-                
                 self.clean_up_all()
                 prog_pos = 'otherart'
                 self.ask()
@@ -6397,22 +6729,28 @@ class Anzeige(Frame):
             self.f_questions.txt3.insert(END,str(previous_coding))
 
 
-    def opendialog(self,mode='load',question_pos=1):
+    def opendialog(self,mode='load',question_pos=1,defaultextension='.txt'):
         fname = ''
+
+        extlist = [('Text File','.txt'),('Data File','.dat'),('Excel Spreadsheet','.xlsx'),('All Files','.*')]
+
+        if not defaultextension == extlist[0][1]:
+            extlist = [('*'+defaultextension,defaultextension)]+extlist
+        
         if mode == 'save':
             try: ##Python 3
-                fname = filedialog.asksaveasfilename(**{'defaultextension':'.txt',
-                                                      'filetypes':[('Text File','.txt'),('Data File','.dat'),('All Files','.*')]})
+                fname = filedialog.asksaveasfilename(**{'defaultextension':defaultextension,
+                                                      'filetypes':extlist})
             except:
-                fname = tkFileDialog.asksaveasfilename(**{'defaultextension':'.txt',
-                                                          'filetypes':[('Text File','.txt'),('Data File','.dat'),('All Files','.*')]})
+                fname = tkFileDialog.asksaveasfilename(**{'defaultextension':defaultextension,
+                                                          'filetypes':extlist})
         elif mode == 'load':
             try: ##Python 3
-                fname = filedialog.askopenfilename(**{'defaultextension':'.dat',
-                                                          'filetypes':[('Text File','.txt'),('Data File','.dat'),('All Files','.*')]})
+                fname = filedialog.askopenfilename(**{'defaultextension':defaultextension,
+                                                          'filetypes':extlist})
             except:
-                fname = tkFileDialog.askopenfilename(**{'defaultextension':'.dat',
-                                                          'filetypes':[('Text File','.txt'),('Data File','.dat'),('All Files','.*')]})    
+                fname = tkFileDialog.askopenfilename(**{'defaultextension':defaultextension,
+                                                          'filetypes':extlist})    
 
 
         elif mode == 'folder':
@@ -6432,7 +6770,7 @@ class Anzeige(Frame):
             self.f_questions.txt3.insert(END,fname)
             
 
-    def question_file(self, cb_var, question_pos, mode='load'):
+    def question_file(self, cb_var, question_pos, mode='load',defext='.txt'):
         log('--Question: Filename. Variable: '+cb_var+'; Position: '+str(question_pos),pos=0)
         width=50
         
@@ -6453,7 +6791,7 @@ class Anzeige(Frame):
             self.f_questions.Frage1.insert(END, codebook[cb_var][1]) #Coder information
             self.f_questions.txt1 = Entry(self.f_questions, width=width)
             self.f_questions.txt1.grid(row=3,column=0,columnspan=2,sticky=E+W)
-            self.f_questions.getselect1 = Button(self.f_questions,text='Browse...',command=CMD(self.opendialog,mode,question_pos))
+            self.f_questions.getselect1 = Button(self.f_questions,text='Browse...',command=CMD(self.opendialog,mode,question_pos,defext))
             self.f_questions.getselect1.grid(row=3,column=2,sticky=W)
             self.f_questions.help1 = Label(self.f_questions, text="?")
             self.f_questions.help1.grid(row=3, column=3, sticky=E)
@@ -6466,7 +6804,7 @@ class Anzeige(Frame):
             self.f_questions.Frage2.insert(END, codebook[cb_var][1]) #Coder information
             self.f_questions.txt2 = Entry(self.f_questions, width=width)
             self.f_questions.txt2.grid(row=7,column=0,columnspan=2,sticky=E+W)
-            self.f_questions.getselect2 = Button(self.f_questions,text='Browse...',command=CMD(self.opendialog,mode,question_pos))
+            self.f_questions.getselect2 = Button(self.f_questions,text='Browse...',command=CMD(self.opendialog,mode,question_pos,defext))
             self.f_questions.getselect2.grid(row=7,column=2,sticky=W)
             self.f_questions.help2 = Label(self.f_questions, text="?")
             self.f_questions.help2.grid(row=7, column=3, sticky=E)
@@ -6479,7 +6817,7 @@ class Anzeige(Frame):
             self.f_questions.Frage3.insert(END, codebook[cb_var][1]) #Coder information
             self.f_questions.txt3 = Entry(self.f_questions, width=width)
             self.f_questions.txt3.grid(row=11,column=0,columnspan=2,sticky=E+W)
-            self.f_questions.getselect3 = Button(self.f_questions,text='Browse...',command=CMD(self.opendialog,mode,question_pos))
+            self.f_questions.getselect3 = Button(self.f_questions,text='Browse...',command=CMD(self.opendialog,mode,question_pos,defext))
             self.f_questions.getselect3.grid(row=11,column=2,sticky=W)
             self.f_questions.help3 = Label(self.f_questions, text="?")
             self.f_questions.help3.grid(row=11, column=3, sticky=E)
@@ -7812,6 +8150,24 @@ class Anzeige(Frame):
     def debug_on(self,event=0):
         self.deb.grid()
 
+
+    def select_sheet(self,sheetlist):
+        self.sheet = Toplevel(self)
+        self.sheet.title("Select Sheet within Excel Workbook")
+        l = Label(self.sheet,text="Please select a sheet within this workbook")
+        l.grid(row=0,column=0)
+
+        b = Button(self.sheet,text="OK",command=self.confirm_sheet)
+        b.grid(row=2,column=0)
+
+
+    def confirm_sheet(self,event=0):
+        global settings
+
+        settings['Current_Sheet']="Hallo"
+        self.sheet.destroy()
+
+
     def show_variables(self):
         self.infobox = Toplevel(self)
         self.infobox.rowconfigure(1, weight=1)
@@ -8620,7 +8976,7 @@ class Anzeige(Frame):
         global storage
         global settings
                 
-        dset = get_dataset(fname, header, sep)
+        dset = get_dataset(fname, header, sep,master=self)
 
         if dset[0] in ['invalid',0]:
             verb('ERROR: Invalid File')
@@ -9351,7 +9707,6 @@ class Anzeige(Frame):
         except:
             verb('--Unable to remove text')
 
-
     def intronase(self): ##Cut loops from the page history. Necessary for the correct application of the back-function
         log('--Intronase')
         current = settings['Page_History'][len(settings['Page_History'])-1]
@@ -9369,22 +9724,20 @@ class Anzeige(Frame):
         global settings
         log('Calling Function: Hilfe zu')
         storage['Helptexts'] = storage['Helptexts'] + 1
-        htext_out = ""
-        for zeichen in htext:
-            if zeichen == '#':
-                htext_out = htext_out + '\n'
-            else:
-                htext_out = htext_out + zeichen
+        htext = htext.replace("#","\n")
         if settings['Python_Version']==3:
-            messagebox.showinfo("Help", htext_out)
+            messagebox.showinfo("Help", htext)
         else:
-            tkMessageBox.showinfo("Help", htext_out)
+            tkMessageBox.showinfo("Help", htext)
+
 
     def message(self,m_id,m_type=1,var='Err_Msg',add=''):
         log('Calling Function: Message with message: '+m_id+' in Codebook-Variable: '+var)
         title = m_id
         text = self.namegetter(var,m_id)+add
         r = 0
+
+        text = text.replace("#","\n")
 
         if settings['Python_Version']==3:
             if m_type == 1:
@@ -9448,8 +9801,10 @@ class Anzeige(Frame):
                 for dvar in sorted(def_val.keys()):
                     c_file.write(dvar)
                     c_file.write(':')
-                    c_file.write(str(def_val[dvar]))
-                    c_file.write('\n')                    
+                    dv = str(def_val[dvar])
+                    dv = dv.replace("#","")
+                    c_file.write(dv)
+                    c_file.write('\n')                
             else:                
                 for i in range(0,len(cini[variable][2])):
                     c_file.write(cini[variable][3][i])
@@ -9588,10 +9943,9 @@ def get_codebook(filename): ##Load the codebook from a given file. Returns a cod
                 else:
                     opt = cod_zeile[cut+1:-1]
                     cod = cod_zeile[:cut]
-
-                while '#' in opt:
-                    c = opt.find('#')
-                    opt = opt[:c]+'\n'+opt[c+1:]
+##                while '#' in opt:
+##                    c = opt.find('#')
+##                    opt = opt[:c]+'\n'+opt[c+1:]
                 optionen.append(opt)
                 codes.append(cod)
                 i = i + 1
@@ -9932,16 +10286,38 @@ def log_settings(out_vars,outfile,append=1):
 ##############################################
 
 
-def get_dataset(fname, header=1, sep='\t'):
-    try:
-        data = get_data(fname,header,sep)
-    except:
-        data = [{},[],'Could not get data.','ERROR: Could not get data']
-        
-    if data[0] == 0:
-        data[0] = 'invalid'
-        description = ''
+def get_dataset(fname, header=1, sep='\t',master=''):
+    data = 0
 
+    if sep == 'xlsx' or ".xlsx" in fname:
+        if settings["Excel"]==1:
+            verb("Loading Excel-File: "+fname)
+            data = get_xlsx(fname, header,master=master)
+        else:
+            data = 0
+        if data == 0:
+            verbout("\n",master=master)
+            verbout("Unable to load this file as Excel-File.","warning",master=master)
+            verbout("\nPackage 'openpyxl' is not available","warning",master=master)
+            verbout("\n",master=master)
+        elif type(data)==str:
+            verbout("\n",master=master)
+            verbout("Unable to load this file as Excel-File.\n","warning",master=master)
+            verbout(data,"warning",master=master)
+            verbout("\n\nTrying to load it as a text file with tabstopps.",master=master)
+            data = 0
+            sep = '\t' ## Set to this default to probably save the day.
+                    
+    if data == 0:
+        try:
+            data = get_data(fname,header,sep,master=master)
+        except Exception as f:
+            data = [{},[],'Could not get data.','ERROR: Could not get data']
+            print(f)
+            
+        if data[0] == 0:
+            data[0] = 'invalid'
+            description = ''
     return data
 
 def write_dataset(data,filename,header=1,sep='\t'):
@@ -9977,8 +10353,82 @@ def get_varnames(filename,header=1,sep='\t'):
             vlist = nv        
     return vlist
 
-def get_data(filename, header=1, sep='\t', varlist = [],verbose=2):
+def get_xlsx(filename, header=1, sheet=0, master=''):
+    errmsg = ""
+    try:
+        wb = load_workbook(filename=filename, data_only=True)
+        sheets = wb.sheetnames
+    except:
+        errmsg+="The file '"+filename+"' could not be loaded as Excel file.\n"
+        outdata = errmsg
+        verb(errmsg)
+        sheets = []
+
+    if len(sheets)>0:
+
+        if type(master)==str: ## If this function was called without open Nogrod window
+            sheet = sheets[0]
+        elif len(sheets)>1:
+            question = "Multiple Sheets detected in this workbook. Which one do you want to open?\nNames of all sheets: '"+"'; '".join(sheets)+"'"
+            sheet = ''
+            while not sheet in sheets and not sheet == None:
+                sheet = simpledialog.askstring("Select Sheet",question,parent=master,initialvalue=sheets[0])
+            if sheet==None:
+                sheet = sheets[0]
+        else:
+            sheet = sheets[0]
+
+        sheet_temp = wb[sheet]
+        a = sheet_temp.dimensions
+        
+        rmin = sheet_temp.min_row
+        rmax = sheet_temp.max_row
+        cmin = sheet_temp.min_column
+        cmax = sheet_temp.max_column
+
+        data = {}
+        varlist = []
+
+        vcount = 1
+        for c in sheet_temp.iter_cols(min_row=rmin,max_row=rmax,
+                                  min_col=cmin, max_col=cmax):
+            column = []
+            for v in c:
+                val = v.value
+                if val == None:
+                    val = ''
+                column.append(str(val))
+
+            if header in [1,'1']:
+                vname = column[0]
+                column = column[1:]
+                if vname == '':
+                    vname = "Var_{0:02}".format(vcount)
+                if vname in varlist:
+                    vlab = vname
+                    vnum = 1
+                    vname = "{0}_{1:02}".format(vlab,vnum)
+                    while vname in varlist:
+                        vnum+=1
+                        vname = "{0}_{1:02}".format(vlab,vnum)
+            else:
+                vname = "Var_{0:02}".format(vcount)
+
+            vcount +=1
+            data[vname] = column
+            varlist.append(vname)
+     
+        summary = "Read Excel Worksheet.\n"+str(len(data.keys()))+" Variables\n"+str(len(column))+" Cases."
+        errmsg=""
+        outdata = [data,varlist,summary,errmsg]
+
+    return outdata
+
+
+def get_data(filename, header=1, sep='\t', varlist = [],verbose=2,master=''):
+    global settings
     errmsg = ''
+        
     try:
         inp_file = open(filename, 'r',encoding="latin-1")
         dtalines = inp_file.readlines()
@@ -10012,9 +10462,9 @@ def get_data(filename, header=1, sep='\t', varlist = [],verbose=2):
                             if value[0] in ['"',"'"] and value[-1] in ['"',"'"]: value = value[1:-1]
                         data_dic[varlist[k]].append(value)
                 elif len(dta) > len(varlist):
-                    errmsg = errmsg + 'ERROR: line '+str(i)+' has more values than variables (N='+str(len(dta))+'). Ignoring line'
+                    errmsg = errmsg + 'ERROR: line '+str(i)+' has more values than variables (N='+str(len(dta))+'). Ignoring line\n'
                 else:
-                    errmsg = errmsg + 'ERROR: line '+str(i)+' has less values than variables (N='+str(len(dta))+'). Ignoring line'
+                    errmsg = errmsg + 'ERROR: line '+str(i)+' has less values than variables (N='+str(len(dta))+'). Ignoring line\n'
 
         ncases = len(data_dic[varlist[0]])
         nvars = len(varlist)
@@ -10025,6 +10475,26 @@ def get_data(filename, header=1, sep='\t', varlist = [],verbose=2):
         verb('\n'+summary,verbose)
         
     return [data_dic, varlist, summary, errmsg]
+
+
+
+def write_xlsx(data,varlist,filename,header=1):
+    ## Gets a well-formed data dictionary and a varlist from the write_data function.
+    ## All the function does is to write an Excel-Sheet with an oblong table.
+    wb = Workbook()
+    ws = wb.active ## Current worksheet to fill
+
+    if header == 1:
+        ws.append(varlist)
+
+    for i in range(len(data[varlist[0]])):
+        row = []
+        for v in varlist:
+            row.append(data[v][i])
+        ws.append(row)
+    
+    wb.save(filename)
+    
 
 
 def write_data(data,init_varlist,filename,header=1,sep='\t',verbose=2):
@@ -10060,37 +10530,47 @@ def write_data(data,init_varlist,filename,header=1,sep='\t',verbose=2):
         for v in remvar:
             varlist.remove(v)
 
+    if sep=="xlsx":
+        if not filename[:-5]==".xlsx":
+            filename+=".xlsx"
+            filename = filename.replace(".txt","")
+            
     try:
         exp_file = open(filename,'w')
     except:
         varlist = []
         errmsg = errmsg + 'ERROR: File '+filename+' could not be created. Invalid filename.\n'
 
-    if len(varlist) > 0:     
-        if header == 1:
-            for k in range(len(varlist)):
-                exp_file.write(varlist[k])
-                if k < len(varlist)-1:
-                    exp_file.write(sep)
-                else:
-                    exp_file.write('\n')
+    if len(varlist) > 0:
+        if sep == 'xlsx':
+            exp_file.close()
+            t = write_xlsx(data,varlist,filename,header)
 
-        for i in range(len(data[varlist[0]])):
-            for k in range(len(varlist)):
-                outval = data[varlist[k]][i]
-                if type(outval) == float:
-                    if outval == int(outval):
-                        outval = int(outval)
-                try:
-                    exp_file.write(str(outval))
-                except:
-                    exp_file.write('UNICODE_ERROR')
-                if k < len(varlist)-1:
-                    exp_file.write(sep)
-                else:
-                    exp_file.write('\n')
+        else:
+            if header == 1:
+                for k in range(len(varlist)):
+                    exp_file.write(varlist[k])
+                    if k < len(varlist)-1:
+                        exp_file.write(sep)
+                    else:
+                        exp_file.write('\n')
 
-        exp_file.close()
+            for i in range(len(data[varlist[0]])):
+                for k in range(len(varlist)):
+                    outval = data[varlist[k]][i]
+                    if type(outval) == float:
+                        if outval == int(outval):
+                            outval = int(outval)
+                    try:
+                        exp_file.write(str(outval))
+                    except:
+                        exp_file.write('UNICODE_ERROR')
+                    if k < len(varlist)-1:
+                        exp_file.write(sep)
+                    else:
+                        exp_file.write('\n')
+
+            exp_file.close()
         outtext = '\nFile "'+filename+'" successfully created.\n'
         outtext = outtext + str(len(data[varlist[0]])) + ' Cases\n'+str(len(varlist))+' Variables\n'
     else:
@@ -10101,6 +10581,12 @@ def write_data(data,init_varlist,filename,header=1,sep='\t',verbose=2):
     verb('\n'+outtext,verbose)
     
     return [outtext,errmsg,'']
+
+def dim(dset): ## Alternate spelling
+    return data_dim(dset)
+
+def dset_dim(dset): ## Alternate spelling
+    return data_dim(dset)
 
 def data_dim(dset):
     if type(dset) in [list,tuple]:
@@ -10153,6 +10639,8 @@ def get_sep(s):
         sep = ','
     elif s == '4':
         sep = '";"'
+    elif s == '5':
+        sep = "xlsx"
     else:
         sep = '\t'
         verb('ERROR: Invalid choice for separator')
@@ -12125,7 +12613,7 @@ def get_univ(flist, lang, ngram, sparsity=[.01,.99], encod='latin-1',master=''):
 
 
 def generate_tdm(textlist,idlist=[],lang='none',ngrams=2,sparsity=[.01,.99],universe=[],master=''):
-    verbout('\nGenerating TDM for '+str(len(textlist))+' documents.',master=master)
+    verbout('\nGenerating TDM for '+str(len(textlist))+' documents.',master=master)    
     if universe == []:
         verbout('\nNo universe of ngrams loaded. Using all words.',master=master)
     if idlist == []:
@@ -12144,13 +12632,16 @@ def generate_tdm(textlist,idlist=[],lang='none',ngrams=2,sparsity=[.01,.99],univ
     verbout("\nList of ngrams for all texts prepared. N = "+str(len(tokendic.keys())),master=master)
     
     tlist = ['res_Document']
-    minanz = float(len(textlist)*sparsity[0])
-    maxanz = float(len(textlist)*sparsity[1])
-    verbout('\n\nRemoving ngrams appearing in less than '+str(minanz)+' or more than '+str(maxanz)+' texts',master=master)
-    for t in sorted(tokendic.keys()):
-        if tokendic[t]>minanz and tokendic[t]<maxanz:
-            tlist.append(t)
-    verbout('\nRemaining ngrams: '+str(len(tlist)-1),master=master)
+    if type(sparsity)==list:
+        minanz = float(len(textlist)*sparsity[0])
+        maxanz = float(len(textlist)*sparsity[1])
+        verbout('\n\nRemoving ngrams appearing in less than '+str(minanz)+' or more than '+str(maxanz)+' texts',master=master)
+        for t in sorted(tokendic.keys()):
+            if tokendic[t]>minanz and tokendic[t]<maxanz:
+                tlist.append(t)
+        verbout('\nRemaining ngrams: '+str(len(tlist)-1),master=master)
+    else:
+        tlist +=sorted(list(tokendic.keys()))
     
     tdm = {}
     for t in tlist:
@@ -12162,23 +12653,26 @@ def generate_tdm(textlist,idlist=[],lang='none',ngrams=2,sparsity=[.01,.99],univ
         panz = int(40.0/len(textlist))
         step = 1
     verbout('\n\nReading texts:\n0%-------25%-------50%-------75%-------100%\n','progress',master=master)
-    
+
     for i in range(len(textlist)):
         if i%step == 0:verbout('.','progress',master=master)
         tdm['res_Document'].append(idlist[i])
-        for t in tlist:
+        for t in tlist[1:]: ##Do not do it for 'res_Document'
             if t in tokenlist[i]:
                 tdm[t].append(1)
             else:
                 tdm[t].append(0)
     verbout('\n\nTDM complete\n',master=master)
-
     return tdm
 
 
 ################## SVM
 
-def svm_scores(tdm,rvec,features=[],cases=[],verbose=0):
+def svm_scores(tdm_in,rvec,features=[],cases=[],verbose=0):
+    tdm = {}
+    for t in tdm_in:
+        if not t == 'res_Document': tdm[t] = tdm_in[t]
+    
     if features == []: features = list(tdm.keys())
     if cases == []: cases = range(len(tdm[features[0]]))
     scorelist = []
@@ -21135,6 +21629,7 @@ settings['Fontsize']="10" ##Font Size within the text display. No effect on ques
 settings['Layout'] = 'Lefty' ##Layout of Angrist. 'Lefty' sets the left-handed design in which the check button is bottom-left. 'Righty' sets right-handed layout with Check on bottom-right.
 settings['Styleset'] = 'Default' ##Text display settings. Loaded in define_styleset
 settings['Python_Version'] = py_version ##Text display settings. Loaded in define_styleset
+settings['Excel']= xlsx ## Is 1 if xlsx is supported and 0 if it is not.
 settings['Curr_Page'] = [['el1','var1'],['el2','var2'],['el3','var3']] ##Temporary storage of current page order. Essential for displaying and storing values.
 settings['Page_History'] = [] ##Will contain the whole list of visited pages during program execution
 settings['Input'] = ['','',''] ##Temporary Storage of input values. Essential for moste question types.
