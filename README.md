@@ -11,7 +11,7 @@ In order to use Nogrod on Python, three files (Nogrod.pyw, n_codebook.ini, and n
 - On Mac: Technically, the Tk-Interface should work on Mac but it was not tested. The best practice to get it to run on Mac is to install a Windows Emulator (e.g. Wine) and install Python for Windows to run it from within this emulator.
 - On Linux: Again, an emulator for Windows programs is recommended.
 
-You may also use Nogrod as a stand-alone executable. Here, you do not need any installation of Python but just the Windows binary Nogrod.exe.
+You may also use Nogrod as a stand-alone executable. Here, you do not need any installation of Python but just the Windows binary Nogrod.exe (Note: As the script uses the ´os´ library, it is recognized as security risk by Windows).
 
 When the window opens, there is only one button: It allows you to select the data manipulation/analysis function. As soon as you choose a function, Nogrod guides you through the entry of required parameters to run the function. All parameters are entered by means of drop down menues, lists, and checkboxes.
 
