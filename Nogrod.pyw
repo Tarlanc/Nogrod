@@ -29,6 +29,7 @@ try: ##if Python Version 3.x
     from tkinter import messagebox
     from tkinter import filedialog
     from tkinter import simpledialog
+    import re
     py_version = 3
 except: ##If Python Version 2.7
     from Tkinter import *
@@ -651,6 +652,30 @@ class Anzeige(Frame):
             self.question_dd('Out_Header',2)
             self.question_dd('Out_Sep',3)
 
+            
+
+        elif prog_pos == 'nts_input':
+            self.question_file('NTS_Input',1)
+            self.question_dd('In_Header',2)
+            self.question_dd('In_Sep',3)
+
+        elif prog_pos == 'nts_var':
+            self.question_dd('NTS_Tvar',1)
+            self.question_dd('NTS_Gvar',2)
+            self.question_dd('NTS_Zero',3)
+
+        elif prog_pos == 'nts_dur':
+            self.question_txt('NTS_Duration',1)
+
+        elif prog_pos == 'nts_vars':
+            self.question_ladd('NTS_Vars','NTS_Vars')
+            self.question_dd('NTS_Method',3)
+
+        elif prog_pos == 'nts_out':
+            self.question_file('NTS_Out',1,'save')
+            self.question_dd('Out_Header',2)
+            self.question_dd('Out_Sep',3)
+            
 
 
         elif prog_pos == 'mpatd_input':
@@ -970,6 +995,23 @@ class Anzeige(Frame):
             self.question_file('Corpus_Out',1,'save')
             self.question_dd('Out_Header',2)
             self.question_dd('Out_Sep',3)
+
+######################### Inspect Corpus
+
+        elif prog_pos == 'insp_in':
+            self.question_file('RE_Input',1)
+            self.question_dd('In_Sep',2)
+            self.question_dd('In_Header',3)
+
+        elif prog_pos == 'insp_var':
+            self.question_dd('RE_Fulltext',1)
+            self.question_dd('RE_ID',2)
+
+        elif prog_pos == 'insp_find':
+            self.question_txt('RE_Expression',1)
+            self.question_rb('RE_Case',2)
+
+
 
 ######################### SVM
             
@@ -1515,6 +1557,13 @@ class Anzeige(Frame):
                     verbout('\n\n',master=self)
                     prog_pos = 'gaps_input'
                     self.ask()
+                elif m == 'Ts7':
+                    verb('----Choice: Normalize Time series')
+                    self.anzeigen()
+                    verbout('New Procedure: Normalize Timeseries to force equidistant measurements','title',master=self)
+                    verbout('\n\n',master=self)
+                    prog_pos = 'nts_input'
+                    self.ask()                
                 elif m == 'Ts5':
                     verb('----Choice: Parallel Pattern Detection')
                     self.anzeigen()
@@ -1619,6 +1668,11 @@ class Anzeige(Frame):
                     prog_pos = 'pred_in'
                     storage['Pred_Mode'] = 2
                     self.ask()
+                elif m == 'In1':
+                    self.anzeigen()
+                    self.verbout('New Procedure: Inspect Corpus\n-------------------------\n')
+                    prog_pos = 'insp_in'
+                    self.ask()                    
                 elif m == 'SVM_Train':
                     verb('----Choice: Train SVM')
                     self.anzeigen()
@@ -3426,6 +3480,137 @@ class Anzeige(Frame):
                     self.ask()
 
 
+######################################################## Normalize Time series
+
+
+##        elif prog_pos == 'nts_input':
+##            self.question_file('NTS_Input',1)
+##            self.question_dd('In_Header',2)
+##            self.question_dd('In_Sep',3)
+##
+##        elif prog_pos == 'nts_var':
+##            self.question_dd('NTS_Tvar',1)
+##            self.question_dd('NTS_Gvar',2)
+##
+##        elif prog_pos == 'nts_dur':
+##            self.question_txt('NTS_Duration',1)
+##
+##        elif prog_pos == 'nts_vars':
+##            self.question_ladd('NTS_Vars',1)
+##            self.question_dd('NTS_Method',3)
+##
+##        elif prog_pos == 'gaps_out':
+##            self.question_file('NTS_Out',1,'save')
+##            self.question_dd('Out_Header',2)
+##            self.question_dd('Out_Sep',3)
+            
+                  
+            elif prog_pos == 'nts_input':                
+                fname = make_fname(self.store_var('NTS_Input'))
+                header = self.store_var('In_Header')[1]
+                sep = get_sep(self.store_var('In_Sep')[1])
+
+                verbout('\nLoading file: '+fname, master=self)
+                dset = self.load_dset(fname,header,sep,'Data','D_Var','Main_Table')
+                if not dset == 0:
+                    v = dset[1]
+                    add_varlist('NTS_Tvar',v,excludes=[])
+                    add_varlist('NTS_Gvar',v,excludes=[],retain=1)
+                    add_varlist('NTS_Vars',v,excludes=[])
+                                    
+                    self.clean_up_all()
+                    prog_pos = 'nts_var'
+                    self.ask()
+
+
+            elif prog_pos == 'nts_var':
+                self.store_var_all()
+                self.clean_up_all()
+                prog_pos = 'nts_dur'
+
+                ts = transform_float(storage['Data'][storage['NTS_Tvar'][1]])
+                storage['Data'][storage['NTS_Tvar'][1]] = ts
+
+                if storage['NTS_Gvar'][1] == 'res_nogroup':
+                    grp = ['1']*len(ts)
+                    storage['Data']['res_nogroup']=grp
+                    storage['D_Var'].append('res_nogroup')
+                else:
+                    grp = storage['Data'][storage['NTS_Gvar'][1]]
+
+                storage['Data'] = sort_table(storage['Data'],[storage['NTS_Tvar'][1],storage['NTS_Gvar'][1]])
+
+                sequences = {}
+                for i in range(len(ts)):
+                    if not grp[i] in sequences.keys():
+                        sequences[grp[i]] = []
+                    sequences[grp[i]].append(ts[i])
+
+                verbout('\n\nSummary of time series distributions:',master=self)
+
+                for s in sequences.keys():
+                    if len(sequences[s])>2:
+                        ds = stat_desc(sequences[s])
+                        verbout('\n\nGroup: "'+str(s)+'":\n-----------------',master=self)
+                        verbout('\nM={0:.3f}; SD={1:.3f}; N={2}; Range={3:.3f}'.format(ds['M'],ds['SD'],ds['N_Total'],ds['Range']),'table',master=self)
+                        steps = []
+                        for i in range(1,len(ds['Val'])):
+                            steps.append(ds['Val'][i]-ds['Val'][i-1])
+                        ds2 = stat_desc(steps)
+                        verbout('\nMean step={0:.3f}; Smallest step: {1:.3f}; Largest step: {2:.3f}'.format(ds2['M'],ds2['Min'],ds2['Max']),'table',master=self)
+                    else:
+                        verbout('\n\nGroup: "'+str(s)+'":\n-----------------\nToo small to do statistics (N='+str(len(sequences[s]))+')',master=self)
+                    
+                ## Compute and display session lengths, min, max and mean time stamp gaps
+                self.ask()
+
+
+            elif prog_pos == 'nts_dur':
+                self.store_var_all()
+                try:
+                    storage['NTS_Duration'] = float(storage['NTS_Duration'])
+                    self.clean_up_all()
+                    prog_pos = 'nts_vars'
+                    self.ask()
+                except Exception as f:
+                    print(f)
+                    self.message('Invalid-Selection07')
+            
+
+            elif prog_pos == 'nts_vars':
+                self.store_var_all()
+                self.clean_up_all()
+                prog_pos = 'nts_out'
+                self.ask()
+
+
+            elif prog_pos == 'nts_out':
+                self.store_var_all()
+                data = storage['Data']
+                varlist = storage['D_Var']
+                gvar = storage['NTS_Gvar'][1]
+                tvar = storage['NTS_Tvar'][1]
+                addvars = storage['NTS_Vars'][1]
+                method = storage['NTS_Method'][1]
+                relts = storage['NTS_Zero'][1]
+                length = int(storage['NTS_Duration'])
+
+                outfile = make_fname(storage['NTS_Out'])
+                header = int(storage['Out_Header'][1])
+                sep = get_sep(storage['Out_Sep'][1])
+
+                out_data = normalize_ts([data,varlist],tvar,gvar,length,addvars,method,relts,master=self)        
+
+                t = write_dataset(out_data,outfile,header,sep)
+                verbout(t[0],master=self)
+                if len(t[1])>2:
+                    verbout('\n'+t[1]+'\n','warning',master=self)
+                else:   
+                    self.clean_up_all()
+                    prog_pos = 'otherart'
+                    self.ask()
+
+
 
 ######################################################## Pattern detection
 
@@ -5186,6 +5371,81 @@ class Anzeige(Frame):
                 self.clean_up_all()
                 prog_pos = 'otherart'
                 self.ask()                
+
+##        elif prog_pos == 'insp_in':
+##            self.question_file('RE_Input',1)
+##            self.question_dd('In_Sep',2)
+##            self.question_dd('In_Header',3)
+##
+##        elif prog_pos == 'insp_var':
+##            self.question_dd('RE_Fulltext',2)
+##
+##        elif prog_pos == 'insp_find':
+##            self.question_dd('RE_Expression',2)
+
+
+            elif prog_pos == 'insp_in':
+                fname = self.store_var('RE_Input')
+                header = self.store_var('In_Header')[1]
+                sep = get_sep(self.store_var('In_Sep')[1])
+                verbout('\nCorpus location: '+fname, master=self)
+
+                verbout('\nLoading file: '+fname, master=self)
+                dset = self.load_dset(fname,header,sep,'Data','D_Var','Main_Table')
+                if not dset == 0:
+                    add_varlist('RE_Fulltext',dset[1],excludes=[])
+                    add_varlist('RE_ID',dset[1],excludes=[],retain=1)
+                    self.clean_up_all()
+                    prog_pos = 'insp_var'
+                    self.ask()
+                else:
+                    verb('ERROR: Invalid File')
+
+            elif prog_pos == 'insp_var':
+                self.store_var_all()
+                self.clean_up_all()
+
+                storage['Text_Vector'] = storage['Data'][storage['RE_Fulltext'][1]]
+                if storage['RE_ID'][1] == 'res_none':
+                    storage['ID_Vector'] = list(range(len(storage['Text_Vector'])))
+                else:
+                    storage['ID_Vector'] = storage['Data'][storage['RE_ID'][1]]
+                
+                prog_pos = 'insp_find'
+                self.ask()
+
+            elif prog_pos == 'insp_find':
+                self.store_var_all()
+                self.clean_up_all()
+
+                expression = storage['RE_Expression']
+
+                accept = 0
+                try:
+                    p = re.compile(expression)
+                    accept = 1
+                except:
+                    self.message("Invalid-Selection08")
+
+                if accept == 1:
+                    verbout("\n\nSearching for Pattern: "+str([expression]),'title',master=self)
+                    verbout("\nNumber of texts: "+str(len(storage['Text_Vector']))+'\n (Capping at 200 matches)\n',master=self)
+                    nmatch = 0
+                    for i in range(len(storage['Text_Vector'])):
+                        con = context(storage['Text_Vector'][i], expression, span = 15, case=storage['RE_Case'][1])
+
+                        for c in con:
+                            nmatch+=1
+                            if nmatch<200:
+                                verbout('\n'+c[0],'text',master=self)
+                                verbout(c[1],'warning',master=self)
+                                verbout(c[2],'text',master=self)
+                                verbout(' ({0})'.format(storage['ID_Vector'][i]),master=self)
+
+                    verbout("\n\n  Found: "+str(nmatch)+' Results.\n',master=self)
+                        
+                self.ask()
+
 
 
             elif prog_pos == 'svm_in':
@@ -8307,7 +8567,12 @@ class Anzeige(Frame):
 
     def export_output(self,overspill=0):
         text_content = self.Artikel.get(1.0,END)
-        fname = tkFileDialog.asksaveasfilename(**{'defaultextension':'.txt',
+
+        try: ##Python 3
+            fname = filedialog.asksaveasfilename(**{'defaultextension':'.txt',
+                                                  'filetypes':[('Text File','.txt'),('Data File','.dat'),('All Files','.*')]})
+        except:
+            fname = tkFileDialog.asksaveasfilename(**{'defaultextension':'.txt',
                                                       'filetypes':[('Text File','.txt'),('Data File','.dat'),('All Files','.*')]})
         outf = open(fname,'w')
         outf.write(text_content)
@@ -8316,6 +8581,8 @@ class Anzeige(Frame):
         verbout('\n',master=self)
         verbout('Text output successfully stored to: '+fname,'warning',master=self)
         verbout('\n',master=self)
+        
+
 
     def display_line_plot(self,plotdic,width=800,height=600, verbose=1):
         verb('Painting line plot')
@@ -10997,7 +11264,7 @@ def check_dummytable(dataset):
 
 def desparse(data,minc,mina,remvar=['#Group'],master=''):
     verbout('\nRemoving sparse rows (< '+str(minc)+' Values) and columns (< '+str(mina)+' Groups)\n',master=master)
-    varlist = data.keys()
+    varlist = list(data.keys())
     for v in remvar:
         varlist.remove(v)
     remcol = []
@@ -11027,7 +11294,7 @@ def desparse(data,minc,mina,remvar=['#Group'],master=''):
                 data[v].pop(r)
         for c in remcol:
             del data[c]
-        varlist = data.keys()
+        varlist = list(data.keys())
         for v in remvar:
             varlist.remove(v)
         remcol = []
@@ -11311,6 +11578,11 @@ def tts(invalue,inf,outf,numf='dec',verbose=0,master=''):  ##Transform Timestamp
         elif inf == 'eng':
             try:
                 tf = time.strptime(invalue,"%m/%d/%Y")
+            except:
+                tf = ' nodate'
+        elif inf ==  'gerlong':
+            try:
+                tf = time.strptime(invalue,'%d.%m.%Y %H:%M')
             except:
                 tf = ' nodate'
         else:
@@ -12513,6 +12785,9 @@ def create_ngrams(tokens,nlen=2,universe=[]):
     return nglist
 
 def lemmatize(zeile,lang='none'):
+    ## Takes a line of text (one string variable) and returns a list of
+    ## stemmed tokens in the goven language.
+    
     fixedex = {':-)':'smile',
                ':)':'smile',
                ':D':'smile',
@@ -12530,7 +12805,7 @@ def lemmatize(zeile,lang='none'):
         zeile = zeile.replace(exp,' _'+fixedex[exp]+'_ ')
 
     for Sonderzeichen in ['.',',',';',':','<','>','&','\n','\r','\t',
-                          '"',"'",'/','-','$','(',')']:
+                          '"',"'",'/','-','$','(',')','|']:
         zeile = zeile.replace(Sonderzeichen,' ')
 
     zeile = zeile.lower()
@@ -12539,9 +12814,52 @@ def lemmatize(zeile,lang='none'):
         worte.remove('')
 
     tokens = []
-    for w in worte:
-        tokens.append(stem(w,lang))
+    if lang == 'none':
+        tokens = worte
+    else:
+        for w in worte:
+            tokens.append(stem(w,lang))
+        
     return tokens
+
+
+def context(line, expression, span=10, case=0):
+    ## At the moment only works if re is loaded. Probably make it {base} some time in the future
+    outlist = []
+
+    if case in [0,'0']:
+        pattern = re.compile(expression,re.I)
+    else:
+        pattern = re.compile(expression)
+        
+    obj = ''
+    end = 0
+    while not obj == None:
+        obj = pattern.search(line, pos=end)
+        if not obj == None:
+            end = obj.span()[1]
+            start = obj.span()[0]
+            #print(str([r]),context(text,obj.span()[0],obj.span()[1]))
+    
+            substr = line[start:end]
+
+            if start >= span:
+                leading = line[(start-span):start]
+            else:
+                over = "-" * (span-start)
+                leading = over+ line[:start]
+
+            if end < len(line)-span:
+                tailing = line[end:(end+span)]
+            else:
+                tailing = line[end:]
+
+            outstr = leading + '**' + substr + '**' + tailing
+
+            outlist.append((leading,substr,tailing))
+    return outlist
+
+
 
 
 def get_words(fname, lang='en', laenge=2,encod='latin-1'):
@@ -12612,7 +12930,7 @@ def get_univ(flist, lang, ngram, sparsity=[.01,.99], encod='latin-1',master=''):
     return outdic
 
 
-def generate_tdm(textlist,idlist=[],lang='none',ngrams=2,sparsity=[.01,.99],universe=[],master=''):
+def generate_tdm(textlist,idlist=[],lang='none',ngrams=2,sparsity=[.01,.99],universe=[],weight="dicho", master=''):
     verbout('\nGenerating TDM for '+str(len(textlist))+' documents.',master=master)    
     if universe == []:
         verbout('\nNo universe of ngrams loaded. Using all words.',master=master)
@@ -12657,11 +12975,24 @@ def generate_tdm(textlist,idlist=[],lang='none',ngrams=2,sparsity=[.01,.99],univ
     for i in range(len(textlist)):
         if i%step == 0:verbout('.','progress',master=master)
         tdm['res_Document'].append(idlist[i])
-        for t in tlist[1:]: ##Do not do it for 'res_Document'
-            if t in tokenlist[i]:
-                tdm[t].append(1)
-            else:
-                tdm[t].append(0)
+        if weight=="tf":
+            tw = {}
+            for t in tlist[1:]:
+                tw[t] = 0
+            for t in tokenlist[i]:
+                try:
+                    tw[t]+=1
+                except:
+                    pass
+            for t in tlist[1:]:
+                tdm[t].append(tw[t])
+
+        if weight=="dicho":
+            for t in tlist[1:]: ##Do not do it for 'res_Document'
+                if t in tokenlist[i]:
+                    tdm[t].append(1)
+                else:
+                    tdm[t].append(0)
     verbout('\n\nTDM complete\n',master=master)
     return tdm
 
@@ -14610,6 +14941,195 @@ def detect_gaps(data,tvar,nvar,length,gvar='',sorting=1,master=''):
     return data
     
 #detect_gaps([data,varlist],tvar,nvar,length,gvar='',sorting=1,master=self)
+
+
+def normalize_ts(dset,tvar,gvar,length,addvars=[],method='retain',relts='0',master=''):
+
+    groups = get_unique(dset[0][gvar])
+    print(groups)
+
+    if addvars == []:
+        addvars = dset[1]
+        addvars.remove(tvar)
+        addvars.remove(gvar)
+
+
+    outdata = {}
+    outvars = [gvar,tvar]+addvars
+    for v in outvars:
+        outdata[v] = []
+
+    verbout('\n\nProcessing time series..',master = master)
+                
+    for g in groups:
+        verbout('\nGroup: "'+str(g)+'"',master=master)
+        sdata = {}
+        for v in [gvar,tvar]+addvars:
+            sdata[v] = []
+        for i in range(len(dset[0][tvar])):
+            if g == dset[0][gvar][i]:  
+                for v in [gvar,tvar]+addvars:
+                    sdata[v].append(dset[0][v][i])
+
+        correction = 0
+        if relts in [1,'1']:
+            correction = min(sdata[tvar])
+
+        print(g,dim(sdata))
+
+        point = sdata[tvar][0]
+        start = sdata[tvar][0]-0.5*length
+        end = sdata[tvar][0]+0.5*length
+        idx = 0
+
+        while not point > sdata[tvar][-1]:
+            #print([point,start,end])
+            context = {}
+            context['prev'] = idx
+            context['while'] = []
+            context['while_ts'] = []
+            scani = idx
+            while sdata[tvar][scani] < end and scani < (len(sdata[tvar])-1):
+                if sdata[tvar][scani] > start:
+                    context['while'].append(scani)
+                    context['while_ts'].append(sdata[tvar][scani])
+                scani += 1
+            if scani < len(sdata[tvar]):
+                context['next'] = scani
+            else:
+                context['next'] = scani-1
+            idx = context['next']-1
+
+            context['range'] = sdata[tvar][context['next']]-sdata[tvar][context['prev']]
+            mindist = context['range']
+            context['proximal'] = idx
+            for scani in range(context['prev'],context['next']+1):
+                if abs(sdata[tvar][scani]-point)<mindist:
+                    mindist = abs(sdata[tvar][scani]-point)
+                    context['proximal'] = scani
+
+            #print(baum_schreiben(context))
+
+            if method == 'mode':
+                #print(context['while'])
+                if len(context['while']) == 0:
+                    for v in addvars:
+                        outdata[v].append(sdata[v][context['prev']])
+                elif len(context['while']) == 1:
+                    for v in addvars:
+                        outdata[v].append(sdata[v][context['while'][0]])
+                else:
+                    for v in addvars:
+                        prox = sdata[v][context['proximal']]
+                        dist = {}
+                        #print(context['while'])
+                        for w in context['while']:
+                            try:
+                                dist[sdata[v][w]] += 1
+                            except:
+                                dist[sdata[v][w]] = 1
+                        #print(dist)
+                        ranking = []
+                        for e in dist.keys():
+                            ranking.append((dist[e],e))
+
+                        ranking = sorted(ranking,reverse=True)
+                        #print(ranking)
+
+                        if len(ranking) == 1:
+                            take_value = ranking[0][1]
+                        else:
+                            if ranking[0][0] > ranking[1][0]:
+                                take_value = ranking[0][1]
+                            else:
+                                take_value = prox ## Unsaubere Lösung: Wenn Prox nur einmal und andere Werte häufig vorkommen. Aber im Moment egal.
+
+                        #print(ranking,take_value)
+
+                        outdata[v].append(take_value)
+            elif method == 'proxy':
+                for v in addvars:
+                    outdata[v].append(sdata[v][context['proximal']])
+
+            elif method == 'recent':
+                if len(context['while']) == 0:
+                    for v in addvars:
+                        outdata[v].append(sdata[v][context['prev']])
+                else:
+                    for v in addvars:
+                        take_value = sdata[v][context['prev']]
+                        for w in context['while']:
+                            if sdata[tvar][w] < point:
+                                take_value = sdata[v][w]
+                        outdata[v].append(take_value)
+                        
+
+            elif method == 'interpol':
+                if sdata[tvar][context['proximal']] > point:
+                    upper = context['proximal']
+                    lower = upper-1
+                else:
+                    lower = context['proximal']
+                    upper = lower + 1
+
+                if lower == -1:
+                    upper+=1
+                    lower+=1
+                elif upper == len(sdata[tvar]):
+                    upper-=1
+                    lower-=1 
+
+                for v in addvars:
+                    upperval = ''
+                    lowerval = ''
+                    reach = 0
+                    while upperval == '' and (upper+reach) < len(sdata[tvar]):
+                        try:
+                            uppertime = sdata[tvar][upper+reach] ## Set time first in case an error occurs here
+                            upperval = float(sdata[v][upper+reach])
+                        except:
+                            reach+=1
+
+                    reach = 0
+                    while lowerval == '' and (lower-reach) > -1:
+                        try:
+                            lowertime = sdata[tvar][lower-reach] ## Set time first in case an error occurs here
+                            lowerval = float(sdata[v][lower-reach])
+                        except:
+                            reach+=1
+
+                    if type(upperval) == float and type(lowerval) == float:
+                        #print(upperval,lowerval,uppertime,lowertime)
+                        b = (upperval-lowerval)/(uppertime-lowertime)
+
+                        value = lowerval + (point-lowertime)*b
+
+                        #print(value,point,'\n')                        
+                        
+                    else:
+                        value = ''
+
+                    outdata[v].append(value)
+
+                            
+
+            outdata[tvar].append(point-correction)
+            outdata[gvar].append(g)
+                        
+
+            point+=length
+            start+=length
+            end+=length
+
+    verbout('\n',master=master)
+
+    return [outdata,outvars]
+
+        
+    
+#Call: normalize_ts([data,varlist],tvar,gvar,length,addvars,method,master=self)        
+
+
 
 
 def focus_timeseries(data,issvar,actvar,windir,winlen,master=''):
