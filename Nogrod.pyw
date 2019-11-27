@@ -37,6 +37,8 @@ except: ##If Python Version 2.7
     import tkFileDialog
     py_version = 2
 import time
+from datetime import datetime
+from datetime import timedelta
 import math
 import random
 import unicodedata
@@ -494,8 +496,8 @@ class Anzeige(Frame):
             self.question_txt('TS_Nvar',2)
 
         elif prog_pos == 'ts_format':
-            self.question_rb('TS_Informat',1)
-            self.question_rb('TS_Outformat',2)
+            self.question_rbopen('TS_Informat',1)
+            self.question_rbopen('TS_Outformat',2)
 
         elif prog_pos == 'ts_integer':
             self.question_dd('TS_Int',2)
@@ -2939,8 +2941,14 @@ class Anzeige(Frame):
                 varlist = storage['D_Var']
                 nvar = storage['TS_Nvar']
                 ts = storage['TStamps']
-                informat = storage['TS_Informat'][1]
-                outformat = storage['TS_Outformat'][1]
+                informat = storage['TS_Informat']
+                outformat = storage['TS_Outformat']
+
+                if type(informat) == tuple:
+                    informat = informat[1]
+                if type(outformat) == tuple:
+                    outformat = outformat[1]
+                    
                 if 'TS_Int' in storage.keys():
                     numformat = storage['TS_Int'][1]
                 else:
@@ -6728,15 +6736,24 @@ class Anzeige(Frame):
         global prog_pos
         global storage
         log('Calling Function: RB-Tamper')
+        #print(settings['Curr_Page'])
 
         if prog_pos == 'ts_format':
             try:
                 self.clean_up(pos=3)
             except:
                 verb('No TS_Int found')
-            rbpos1 = self.store_var('TS_Informat',store=0)[1]
-            rbpos2 = self.store_var('TS_Outformat',store=0)[1]
-            
+            rbpos1 = self.store_var('TS_Informat',store=0)
+            if type(rbpos1)==tuple:
+                rbpos1 = rbpos1[1]
+
+            if settings['Curr_Page'][1][1]=='TS_Outformat':
+                rbpos2 = self.store_var('TS_Outformat',store=0)
+                if type(rbpos2)==tuple:
+                    rbpos2 = rbpos2[1]
+            else:
+                rbpos2 = 'pys'
+                
             excalc = ''
             invalue = ''
             i = 0
@@ -6749,6 +6766,7 @@ class Anzeige(Frame):
 
             if outval == '':
                 verb('ERROR: Conversion not possible: '+rbpos1+' > '+rbpos2+' for value "'+str(invalue)+'"')
+                verbout('\nInput and output formats not valid')
             else:
                 verbout('\n\nInput='+rbpos1+'\nOutput='+rbpos2+'\nExample: '+excalc,master=self)
 
@@ -7378,6 +7396,141 @@ class Anzeige(Frame):
             but.grid(row=lpos[k][0],column=lpos[k][1]-1,sticky=W)
 
         self.rb_tamper()
+
+
+    def question_rbopen(self, cb_var, question_pos, layout='vert', defval='98'): #Radiobutton-Question: Up to 7 Radiobuttons may be defined in the codebook.
+        log('--Question: Radiobutton with open ended box. Variable: '+cb_var+'; Position: '+str(question_pos)+'; Layout: '+layout,pos=0)
+        global settings
+        #### Automated content analysis:
+        if settings['AEGLOS'] == '1':
+            wert = -1
+            pred = acabc.predict_short(cb_var,settings['Fulltext'])
+            wert = self.namegetter(cb_var,pred)
+            if not wert == '':
+                if not cb_var in def_val.keys():
+                    def_val[cb_var] = pred
+                    if settings['Verbose'] == '1':
+                        verb('Automated value determination')
+                        verb('Best prediction: '+str(pred)+ 'Value: '+str(wert))
+                else:
+                    if settings['Verbose'] == '1': verb('Another default value has been set already. No changes made')
+
+        settings['Curr_Page'][question_pos-1] = ['rbopen',cb_var]
+        settings['Input'][question_pos-1] = ''
+        curr_tree = curr()
+
+        if cb_var in curr_tree.keys():
+            previous_coding = curr_tree[cb_var]
+            verb('Previous coding found for '+cb_var+': '+str(previous_coding))
+        elif cb_var in def_val.keys():
+            previous_coding = def_val[cb_var]
+            verb('Set default values found for '+cb_var+': '+str(previous_coding))
+        else:
+            previous_coding = '' ###Has to have the same data type as set default values or previous codings
+
+        previous_text = ''
+        if type(previous_coding) == tuple:
+            previous_coding = previous_coding[1]
+        elif type(previous_coding) == str:
+            if len(self.codegetter(cb_var,previous_coding)) >0:
+                previous_coding = self.codegetter(cb_var,previous_coding)
+            elif previous_coding in codebook[cb_var][3]:
+                previous_coding = str(previous_coding)
+            else:
+                previous_text = previous_coding   
+                previous_coding = 'Open Answer'
+##                previous_coding = ''
+##                verb('No valid coding found')
+        else:
+            previous_coding = ''
+            verb('No valid coding found')
+
+
+        if question_pos == 1:
+            self.f_questions.Frage1.insert(INSERT,codebook[cb_var][0], 'fett') #Frage
+            self.f_questions.Frage1.insert(END, codebook[cb_var][1]) #Codieranweisung
+            self.f_questions.rblist1 = Frame(self.f_questions, borderwidth=2, bg=farbton_text)
+            self.f_questions.rblist1.grid(row=3, column=0, columnspan=3, sticky=E+W)
+            self.f_questions.help1 = Label(self.f_questions, text="?")
+            self.f_questions.help1.grid(row=3, column=3, sticky=E)
+            self.f_questions.help1.bind('<Button-1>', CMD(self.hilfe_zu, codebook[cb_var][4]))
+            f = self.f_questions.rblist1
+            self.t1 = Entry(f, width=20)
+            if not previous_text == '': self.t1.insert(0,previous_text)
+            if settings['Insecure']=='1':
+                self.f_questions.ins1 = Label(self.f_questions, text="unsich.", fg="#ee0000")
+                self.f_questions.ins1.grid(row=12, column=3, sticky=E)
+                self.f_questions.ins1.bind('<Button-1>', CMD(self.insecure, cb_var))
+        elif question_pos == 2:
+            self.f_questions.Frage2.insert(INSERT,codebook[cb_var][0], 'fett') #Frage
+            self.f_questions.Frage2.insert(END, codebook[cb_var][1]) #Codieranweisung
+            self.f_questions.rblist2 = Frame(self.f_questions, borderwidth=2, bg=farbton_text)
+            self.f_questions.rblist2.grid(row=7, column=0, columnspan=3, sticky=E+W)
+            self.f_questions.help2 = Label(self.f_questions, text="?")
+            self.f_questions.help2.grid(row=7, column=3, sticky=E)
+            self.f_questions.help2.bind('<Button-1>', CMD(self.hilfe_zu, codebook[cb_var][4]))
+            f = self.f_questions.rblist2
+            self.t2 = Entry(f, width=20)
+            if not previous_text == '': self.t2.insert(0,previous_text)
+            if settings['Insecure']=='1':
+                self.f_questions.ins2 = Label(self.f_questions, text="unsich.", fg="#ee0000")
+                self.f_questions.ins2.grid(row=12, column=3, sticky=E)
+                self.f_questions.ins2.bind('<Button-1>', CMD(self.insecure, cb_var))               
+        elif question_pos == 3:
+            self.f_questions.Frage3.insert(INSERT,codebook[cb_var][0], 'fett') #Frage
+            self.f_questions.Frage3.insert(END, codebook[cb_var][1]) #Codieranweisung
+            self.f_questions.rblist3 = Frame(self.f_questions, borderwidth=2, bg=farbton_text)
+            self.f_questions.rblist3.grid(row=11, column=0, columnspan=3, sticky=E+W)
+            self.f_questions.help3 = Label(self.f_questions, text="?")
+            self.f_questions.help3.grid(row=11, column=3, sticky=E)
+            self.f_questions.help3.bind('<Button-1>', CMD(self.hilfe_zu, codebook[cb_var][4]))
+            f = self.f_questions.rblist3
+            self.t3 = Entry(f, width=20)
+            if not previous_text == '': self.t3.insert(0,previous_text)
+            if settings['Insecure']=='1':
+                self.f_questions.ins3 = Label(self.f_questions, text="unsich.", fg="#ee0000")
+                self.f_questions.ins3.grid(row=12, column=3, sticky=E)
+                self.f_questions.ins3.bind('<Button-1>', CMD(self.insecure, cb_var))               
+
+        namelist = codebook[cb_var][2]
+        codelist = codebook[cb_var][3]+['Open Answer']
+
+        if layout == 'vert':
+            lpos = [(1,1),(2,1),(3,1),(4,1),(5,1),(6,1),(7,1),(1,3),(2,3),(3,3),(4,3),(5,3),(6,3),(7,3)]
+        if layout == 'hor':
+            lpos = [(1,1),(1,3),(2,1),(2,3),(3,1),(3,3),(4,1),(4,3),(5,1),(5,3),(6,1),(6,3),(7,1),(7,3)]
+         
+        settings['Input'][question_pos-1] = StringVar()
+        if previous_coding == '':
+            settings['Input'][question_pos-1].set(defval)
+        else:
+            settings['Input'][question_pos-1].set(previous_coding)
+
+        buttons = []
+        labels = []
+        maxlen = 0
+        for k in range(len(namelist)):
+            lab = Label(f,text=namelist[k])
+            if len(namelist[k])>maxlen:maxlen=len(namelist[k])
+            labels.append(lab)
+            lab.grid(row=lpos[k][0],column=lpos[k][1],sticky=W)
+            but = Radiobutton(f,variable=settings['Input'][question_pos-1],value=codelist[k],command=self.rb_tamper)
+            buttons.append(but)
+            but.grid(row=lpos[k][0],column=lpos[k][1]-1,sticky=W)
+
+        if question_pos == 1:
+            self.t1.grid(row=lpos[k+1][0],column=lpos[k+1][1],sticky=W)
+        elif question_pos == 2:
+            self.t2.grid(row=lpos[k+1][0],column=lpos[k+1][1],sticky=W)
+        elif question_pos == 3:
+            self.t3.grid(row=lpos[k+1][0],column=lpos[k+1][1],sticky=W)
+        but = Radiobutton(f,variable=settings['Input'][question_pos-1],value=codelist[k+1],command=self.rb_tamper)
+        buttons.append(but)
+        but.grid(row=lpos[k+1][0],column=lpos[k+1][1]-1,sticky=W)
+
+        self.rb_tamper()
+
+
           
 
     def question_sd(self, cb_var, question_pos,points=5,defval=0): #Semantic differential question
@@ -9317,6 +9470,20 @@ class Anzeige(Frame):
                 wert = (self.namegetter(variabel,settings['Input'][pos].get()),settings['Input'][pos].get())
                 verb('    Stored Variable:'+variabel+': '+str(wert),1)
                 
+            elif element[0] == 'rbopen':
+                if settings['Input'][pos].get() == 'Open Answer':## Achtung: Analog zu TXT mit pos auslesen!!
+                    if pos == 0:
+                        wert = bereinigen(self.t1.get())
+                    elif pos == 1:
+                        wert = bereinigen(self.t2.get())
+                    elif pos == 2:
+                        wert = bereinigen(self.t3.get())                   
+                    verb('    Stored Variable:'+variabel+': '+str(wert),1)
+                    #wert = (wert,'Open Answer')
+                else:
+                    wert = (self.namegetter(variabel,settings['Input'][pos].get()),settings['Input'][pos].get())
+                verb('    Stored Variable:'+variabel+': '+str(wert),1)
+                
                                     
             elif element[0] == 'spr':
                 wert = {}
@@ -9602,7 +9769,7 @@ class Anzeige(Frame):
                         i[0] = ''
                         i[1] = ''
                         
-            elif typ in ['rb','sd','rating','cb']:
+            elif typ in ['rb','rbopen','sd','rating','cb']:
                 if pos == 1:
                     self.f_questions.rblist1.destroy()
                     self.f_questions.help1.destroy()
@@ -11559,72 +11726,160 @@ def heat_color(sval,mode='bw'): ##Return a color value from a float in range [0;
     return ccode
 
 
-def tts(invalue,inf,outf,numf='dec',verbose=0,master=''):  ##Transform Timestamp
+##def tts(invalue,inf,outf,numf='dec',verbose=0,master=''):  ##Transform Timestamp
+##    outvalue = ''
+##    try:
+##        if inf == 'pys':
+##            tf = time.strptime(invalue,"%a %b %d %H:%M:%S %Y")
+##        elif inf == 'pyn':
+##            tf = time.gmtime(float(invalue))
+##        elif inf == 'ex':
+##            ts = float(invalue)-25569
+##            ts = ts *24*3600
+##            tf = time.gmtime(ts)
+##        elif inf == 'ger':
+##            try:
+##                tf = time.strptime(invalue,"%d.%m.%Y")
+##            except:
+##                tf = ' nodate'
+##        elif inf == 'eng':
+##            try:
+##                tf = time.strptime(invalue,"%m/%d/%Y")
+##            except:
+##                tf = ' nodate'
+##        elif inf ==  'gerlong':
+##            try:
+##                tf = time.strptime(invalue,'%d.%m.%Y %H:%M')
+##            except:
+##                tf = ' nodate'
+##        else:
+##            print(invalue,inf,outf)
+##            print(time.strptime(invalue,inf))
+##            verbose = 1
+##            try:
+##                tf = time.strptime(invalue,inf)
+##            except:
+##                tf = ' nodate'
+##
+##        if verbose == 1:verbout('Transforming Timestamp: "'+str(invalue)+'" ('+str(tf)+') to format '+str(outf))
+##
+##        if outf == 'pyn':
+##            outvalue = time.mktime(tf)
+##        elif outf == 'pys':
+##            outvalue = time.ctime(time.mktime(tf))
+##        elif outf == 'dec_h':
+##            h = tf[3]
+##            sec = 60*tf[4]+tf[5]
+##            outvalue = h+float(sec)/3600
+##        elif outf == 'ex':
+##            ts = time.mktime(tf)
+##            ts = ts / 24 / 3600
+##            outvalue = ts + 25569
+##        elif outf == 'ex7':
+##            ts = time.mktime(tf)
+##            ts = ts / 24 / 3600
+##            outvalue = ts + 25569 - tf[6]
+##        elif outf == 'ex30':
+##            ts = time.mktime(tf)
+##            ts = ts / 24 / 3600
+##            outvalue = ts + 25569 - tf[2] + 2
+##        elif outf == 'ger':
+##            outvalue = time.strftime("%d.%m.%Y",tf)
+##        elif outf == 'eng':
+##            outvalue = time.strftime("%m/%d/%Y",tf)
+##        elif outf == 'time':
+##            outvalue = time.strftime("%H:%M:%S",tf)
+##        else:
+##            outvalue = time.strftime(outf,tf)
+##            
+##    except Exception as f:
+##        a=str(f)
+##        verb('ERROR: '+a)
+##        print(a)
+##
+##    if type(outvalue)==float:
+##        if numf == 'ic':
+##            outvalue = int(outvalue)
+##        elif numf == 'ir':
+##            outvalue = round(outvalue)
+##    return outvalue
+
+def tts(invalue,inf,outf,numf='dec',verbose=0,master=''):  ##Transform Timestamp for Python 3
     outvalue = ''
     try:
         if inf == 'pys':
-            tf = time.strptime(invalue,"%a %b %d %H:%M:%S %Y")
+            tf = datetime.strptime(invalue,"%a %b %d %H:%M:%S %Y")
         elif inf == 'pyn':
-            tf = time.gmtime(float(invalue))
+            tf = datetime.utcfromtimestamp(float(invalue))
         elif inf == 'ex':
             ts = float(invalue)-25569
             ts = ts *24*3600
-            tf = time.gmtime(ts)
+            tf = datetime.utcfromtimestamp(ts)
         elif inf == 'ger':
             try:
-                tf = time.strptime(invalue,"%d.%m.%Y")
+                tf = datetime.strptime(invalue,"%d.%m.%Y")
             except:
                 tf = ' nodate'
         elif inf == 'eng':
             try:
-                tf = time.strptime(invalue,"%m/%d/%Y")
+                tf = datetime.strptime(invalue,"%m/%d/%Y")
             except:
                 tf = ' nodate'
         elif inf ==  'gerlong':
             try:
-                tf = time.strptime(invalue,'%d.%m.%Y %H:%M')
+                tf = datetime.strptime(invalue,'%d.%m.%Y %H:%M')
             except:
                 tf = ' nodate'
         else:
             try:
-                tf = time.strptime(invalue,inf)
+                tf = datetime.strptime(invalue,inf)
             except:
                 tf = ' nodate'
+
+        #print('Time decoded: ',tf)
+        if tf.year == 1900:tf = tf.replace(year=2000)
 
         if verbose == 1:verbout('Transforming Timestamp: "'+str(invalue)+'" ('+str(tf)+') to format '+str(outf))
 
         if outf == 'pyn':
-            outvalue = time.mktime(tf)
+            try:
+                outvalue = (tf-datetime(1970,1,1,0))/timedelta(seconds=1)
+            except:
+                outvalue = time.mktime(tf.timetuple())
         elif outf == 'pys':
-            outvalue = time.ctime(time.mktime(tf))
+            outvalue = tf.strftime("%a %b %d %H:%M:%S %Y")
         elif outf == 'dec_h':
-            h = tf[3]
-            sec = 60*tf[4]+tf[5]
+            h = tf.hour
+            sec = 60*tf.minute+tf.second
             outvalue = h+float(sec)/3600
         elif outf == 'ex':
-            ts = time.mktime(tf)
+            try:
+                ts = (tf-datetime(1970,1,1,0))/timedelta(seconds=1)
+            except:
+                ts = time.mktime(tf.timetuple())
             ts = ts / 24 / 3600
             outvalue = ts + 25569
         elif outf == 'ex7':
-            ts = time.mktime(tf)
+            ts = (tf-datetime(1970,1,1,0))/timedelta(seconds=1)
             ts = ts / 24 / 3600
-            outvalue = ts + 25569 - tf[6]
+            outvalue = ts + 25569 - tf.weekday()
         elif outf == 'ex30':
-            ts = time.mktime(tf)
+            ts = (tf-datetime(1970,1,1,0))/timedelta(seconds=1)
             ts = ts / 24 / 3600
-            outvalue = ts + 25569 - tf[2] + 2
+            outvalue = ts + 25569 - tf.day + 2
         elif outf == 'ger':
-            outvalue = time.strftime("%d.%m.%Y",tf)
+            outvalue = tf.strftime("%d.%m.%Y")
         elif outf == 'eng':
-            outvalue = time.strftime("%m/%d/%Y",tf)
+            outvalue = tf.strftime("%m/%d/%Y")
         elif outf == 'time':
-            outvalue = time.strftime("%H:%M:%S",tf)
+            outvalue = tf.strftime("%H:%M:%S")
         else:
-            outvalue = time.strftime(outf,tf)
+            outvalue = tf.strftime(outf)
             
     except Exception as f:
         a=str(f)
         verb('ERROR: '+a)
+        #print(a)
 
     if type(outvalue)==float:
         if numf == 'ic':
@@ -11632,6 +11887,8 @@ def tts(invalue,inf,outf,numf='dec',verbose=0,master=''):  ##Transform Timestamp
         elif numf == 'ir':
             outvalue = round(outvalue)
     return outvalue
+
+
 
 
 def binomial_odds(draws, p, critical):
@@ -14931,7 +15188,7 @@ def detect_gaps(data,tvar,nvar,length,gvar='',sorting=1,master=''):
         except:
             verbout("\nWarning: Discontinuous time variable. Missing value on line "+str(i),'warning',master=master)
             dt = 0
-        if dt > length:
+        if dt > length or not data[0]['#Group'][i-1]==data[0]['#Group'][i]:
             gi +=1
 
         data[0][nvar].append(gi)
