@@ -2,7 +2,7 @@
 
 ################################################################################################
 ##                                                                                            ##
-##                              Nogrod 1.2. Based on Angrist 1.2                              ##
+##                              Nogrod 1.1.2. Based on Angrist 1.2                              ##
 ##                              --------------------------------                              ##
 ##                                                                                            ##
 ##  Programmer: Martin Wettstein,                                                             ##
@@ -8133,33 +8133,41 @@ class Anzeige(Frame):
 
         curcas = Menu(m,tearoff=0)
         curlab = ''
+        lastone = -1
         for i in range(len(codelist)-1):
-            if codelist[i][0] == '-':
-                curcas.add_command(label=namelist[i],command=CMD(self.submit,codelist[i][1:]))
-            elif codelist[i][0] == '#':
-                if len(curlab) > 1:
-                    m.add_cascade(label=curlab,menu=curcas)
-                    curlab = ''
-                m.add_separator()
-            else:
-                if len(curlab) > 1:
-                    m.add_cascade(label=curlab,menu=curcas)
-                if codelist[i+1][0] == '-':
-                    curcas = Menu(m,tearoff=0)
-                    curlab = namelist[i]
+            if codelist[i][0] == '*':
+                if settings['Debugging'] in [1,'1']:
+                    codelist[i] = codelist[i][1:]
+                    verb('New Code: '+str(codelist[i]))
+                    
+            if not codelist[i][0] == '*': 
+                if codelist[i][0] == '-':
+                    curcas.add_command(label=namelist[i],command=CMD(self.submit,codelist[i][1:]))
+                elif codelist[i][0] == '#':
+                    if len(curlab) > 1:
+                        m.add_cascade(label=curlab,menu=curcas)
+                        curlab = ''
+                    m.add_separator()
                 else:
-                    m.add_command(label=namelist[i],command=CMD(self.submit,codelist[i]))
-                    curlab = ''
+                    if len(curlab) > 1:
+                        m.add_cascade(label=curlab,menu=curcas)
+                    if codelist[i+1][0] == '-' or (codelist[i+1][:2]=='*-' and settings['Debugging'] in [1,'1']):
+                        curcas = Menu(m,tearoff=0)
+                        curlab = namelist[i]
+                    else:
+                        m.add_command(label=namelist[i],command=CMD(self.submit,codelist[i]))
+                        curlab = ''
+                lastone = i
+            else:
+                verb('OMIT: '+str(codelist[i]))
 
-        if codelist[-1][0] == '-':
-            curcas.add_command(label=namelist[-1],command=CMD(self.submit,codelist[-1][1:]))
+        if codelist[lastone][0] == '-':
+            curcas.add_command(label=namelist[lastone],command=CMD(self.submit,codelist[lastone][1:]))
             m.add_cascade(label=curlab,menu=curcas)
         else:
             if len(curlab) > 1:
                 m.add_cascade(label=curlab,menu=curcas)
-            m.add_command(label=namelist[-1],command=CMD(self.submit,codelist[-1]))
-
-
+            m.add_command(label=namelist[lastone],command=CMD(self.submit,codelist[lastone]))
 
 
     def question_mark_units(self,cb_var,Einheit):
@@ -8417,22 +8425,6 @@ class Anzeige(Frame):
             else:
                 if debug == 1: exp_file.write(variabel+"=")               
             exp_file.write('\t')   
-
-    def export_tab_alle(self, filename):
-        log('Calling Function: Export Tab Alle')
-        global tmp_ort
-        ## This Function is currently not used. It would make use of the export_tab-Function for all subtrees within storage
-     
-    def export_tab(self, filename, element):
-        log('Calling Function: Export Tab')
-        #element is a Tuple, which contains two elements:
-        #   Element to be exported
-        #   Another tuple of the form: (ID, ID, ID...) for each level it passes.
-        tabelle = element[0]
-        specify = element[1]
-        if settings['Verbose'] == '1':
-            verb(str(tabelle))
-            verb(str(specify))        
 
 
 ############################################
@@ -9233,50 +9225,10 @@ class Anzeige(Frame):
 
 
     def edit_item(self,level):
-        #Remove an item from the review-List. Depending on level and requirements this function might need adaption.
-        global prog_pos
-        global dta_pos
-        log('Calling Function: Edit_Item')
-        listsel = self.f_review.A_Liste.curselection()
-        if len(listsel) == 0:
-            self.message("Invalid-Selection01")
-        else:
-            select = self.f_review.A_Liste.get(listsel[0])
-            verb(str(select))
-            c1 = 1
-            c2 = select.find('>')
-            code = select[c1:c2]
-            verb('Code to Edit: '+code)
-
-            if type(level) == str:
-                level = [level]
-
-            for l in level:
-                if dta_pos[0] == '-':
-                    if l in storage.keys():
-                        if code in storage[l].keys():
-                            verb('Editing Element: '+code+ 'on Level: '+l)
-                            dta_pos = [l,code,'-','-']
-                elif dta_pos[2] == '-':
-                    if l in storage[dta_pos[0]][dta_pos[1]].keys():
-                        if code in storage[dta_pos[0]][dta_pos[1]][l].keys():
-                            verb('Editing Element: '+code+ 'on Level: '+l)
-                            dta_pos = [dta_pos[0],dta_pos[1],l,code,'-','-']
-                elif dta_pos[4] == '-':
-                    if l in storage[dta_pos[0]][dta_pos[1]][dta_pos[2]][dta_pos[3]].keys():
-                        if code in storage[dta_pos[0]][dta_pos[1]][dta_pos[2]][dta_pos[3]][l].keys():
-                            verb('Editing Element: '+code+ 'on Level: '+l)
-                            dta_pos = [dta_pos[0],dta_pos[1],[dta_pos[2]],[dta_pos[3]],l,code,'-','-']
-
-        if dta_pos[0]=='Speaker' and dta_pos[2]=='-':
-            prog_pos = 's_identity'
-        elif dta_pos[0]=='Speaker' and dta_pos[2]=='Issue':
-            prog_pos = 'i_identity'
-        elif dta_pos[0]=='Speaker' and dta_pos[2]=='ActEval':
-            prog_pos = 'e_target'
-
-        self.clean_up_all()            
-        self.ask()
+        #Remove an item from the review-List.
+        ##Depending on level and requirements this function might need adaption.
+        ## Deprecated in NOGROD
+        pass
 
     def level_up(self):
         log('Calling Function: Level Up')
@@ -10051,7 +10003,8 @@ class Anzeige(Frame):
             self.Artikel.see(END)
         else:
             try:
-                print(zeile,end="")
+                #print(zeile,end="")
+                CMD(print,zeile,end="")
             except Exception as f:
                 print(zeile),
         return zeile
