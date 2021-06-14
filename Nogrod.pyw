@@ -11012,10 +11012,12 @@ def get_directory(path='',ext=[]):
 
 
 def get_unique(liste):
-    td = {}
-    for element in liste:
-        td[element] = 0
-    return sorted(td.keys())
+    ## Replaced with faster algorithm.
+##    td = {}
+##    for element in liste:
+##        td[element] = 0
+##    return sorted(td.keys())
+    return list(dict.fromkeys(liste))
 
 def get_sep(s):
     if s == '1':
@@ -12011,7 +12013,7 @@ def calc_correlation(l1,l2):  ## Calculate pearson Correlation
     return pcor    
 
 
-def calculate(liste,method): ##Calculate may different things from a list
+def calculate(liste,method,num=False): ##Calculate may different things from a list
     ##If the list is a list of 2-tuples, the first value is the value and the second value is the weight. (zipped lists of values and weights)
     ##Methods:
     ## sum, mean, wsum, wmean: (weighted) sums and means of a list
@@ -12019,28 +12021,34 @@ def calculate(liste,method): ##Calculate may different things from a list
     ## freq, first, last: Most frequent, first or last element of a list
     
     out_value = 0
-    nvalues = []
-    nweight = []
-    lenvalues = 0
 
-    for e in liste:
-        if type(e) == tuple: ##If the list is a zipped list of values and weights
-            try:
-                val = float(e[0])
-                wei = float(e[1])
-                nvalues.append(val)
-                nweight.append(wei)
-                lenvalues = lenvalues + 1
-            except:
-                val = 0
-        else: ##If the list is a list of numbers or strings
-            try:
-                val = float(e)
-                nvalues.append(val)
-                nweight.append(1)
-                lenvalues = lenvalues + 1
-            except:
-                val = 0
+    if num:
+        nvalues = liste
+        lenvalues = len(nvalues)
+        nweight = [1]*lenvalues
+    else:
+        nvalues = []
+        nweight = []
+        lenvalues = 0
+
+        for e in liste:
+            if type(e) == tuple: ##If the list is a zipped list of values and weights
+                try:
+                    val = float(e[0])
+                    wei = float(e[1])
+                    nvalues.append(val)
+                    nweight.append(wei)
+                    lenvalues = lenvalues + 1
+                except:
+                    val = 0
+            else: ##If the list is a list of numbers or strings
+                try:
+                    val = float(e)
+                    nvalues.append(val)
+                    nweight.append(1)
+                    lenvalues = lenvalues + 1
+                except:
+                    val = 0
     
     if method in ['sum','mean','sd','wsum','wmean','nval']:
         s = 0.0
@@ -12359,6 +12367,7 @@ def make_fname(fname,ext='txt',suffix=''):
 def bereinigen(uml_string, lc=0,lb=0,uml=0,encod='latin-1'):
     #This function removes any special character from a string.
     replace = {}
+    replace[125] = {1:'}',0:'}'}
     replace[126] = {1:'~',0:'tilde'}
     replace[128] = {1:'E',0:'euro'}
     replace[132] = {1:'"',0:'"'}
@@ -13148,7 +13157,17 @@ def generate_tdm(textlist,idlist=[],lang='none',ngrams=2,sparsity=[.01,.99],univ
         idlist = list(range(len(textlist)))
     tokenlist = []
     tokendic = {}
+
+    step = int(len(textlist)/40)
+    panz = 1
+    if step<1:
+        panz = int(40.0/len(textlist))
+        step = 1    
+    verbout('\n\nLoading texts:\n0%-------25%-------50%-------75%-------100%\n','progress',master=master)
+    i = 0
     for text in textlist:
+        i+=1
+        if i%step == 0:verbout('.','progress',master=master)
         tokens = lemmatize(text,lang)
         nglist = create_ngrams(tokens,ngrams,universe)
         for t in nglist:
@@ -13284,119 +13303,125 @@ def train_svm(tdm, classvec,master=''):
 
     verbout("\nTraining SVM on "+str(len(classvec))+" cases using "+str(len(tdm.keys()))+" features",master=master)
     terms = list(tdm.keys())
-    stats = {}
+    sdev = {}
+
+    step = int(len(terms)/40)
+    panz = 1
+    if step<1:
+        panz = int(40.0/len(terms))
+        step = 1
+    verbout('\n\nPreparing Feature Statistics:\n0%-------25%-------50%-------75%-------100%\n','progress',master=master)
+    i = 0
     for t in terms:
-        stats[t] = stat_desc(tdm[t])
+        i+=1
+        if i%step == 0:verbout('.','progress',master=master)
+        sdev[t] = calculate(tdm[t],'sd',True)
 
     cases = range(len(classvec))
 
     verbout("\nFeature statistics prepared.",master=master)
 
-    ##Step 1: Create Resulting Vector between Class 1 and 0
-
-    clist = [[],[]]
-    for i in cases:
-        if classvec[i] == 1:
-            clist[1].append(i)
-        else: ## Categorizes 1 versus all other
-            clist[0].append(i)
 
     rvec  ={'Intercept':0.0}
+    wstats = {0:{'N':0,'Sum':{}}, 1:{'N':0,'Sum':{}}}
 
-    for t in terms:
-        rvec[t] = 0
-
-    step = int(len(clist[1])*len(clist[0])/40)
+    step = int(len(classvec)/40)
     panz = 1
     if step<1:
-        panz = 2 ##approximation which will never be used
+        panz = int(40.0/len(classvec))
         step = 1
-    verbout('\n\nSeeking discriminating vector:\n0%-------25%-------50%-------75%-------100%\n','progress',master=master)
-    
-    npairs = 0
-    for c1 in clist[1]:
-        for c0 in clist[0]:
-            npairs+=1
-            if npairs%step == 0: verbout('.','progress',master)
-            for t in terms:
-                try:
-                    rvec[t] += tdm[t][c1] - tdm[t][c0]
-                except:
-                    verbout('Fehler',c1,c0,t,master)
-    ranking = []
-    for term in terms:
-        rvec[term] = rvec[term]/npairs
-        ranking.append((abs(rvec[term]/stats[term]['SD']),term))
+    verbout('\n\nComputing discriminating vector:\n0%-------25%-------50%-------75%-------100%\n','progress',master=master)
+    for t in terms:
+        wstats[0]['Sum'][t]=0
+        wstats[1]['Sum'][t]=0
+    for i in range(len(classvec)):
+        if i%step == 0:verbout('.','progress',master=master)
+        value = classvec[i]
+        wstats[value]['N']+=1
+        for t in terms:
+            wstats[value]['Sum'][t]+=tdm[t][i]
+    verbout('\n\n'+str(wstats[0]['N'])+' texts are in category 0 and '+str(wstats[1]['N'])+' in category 1')
 
-    ranking = sorted(ranking, reverse=True)
+    if wstats[0]['N']*wstats[1]['N']>0:  
+        ranking = []
+        for t in terms:
+            m0 = float(wstats[0]['Sum'][t])/wstats[0]['N']
+            m1 = float(wstats[1]['Sum'][t])/wstats[1]['N']
+            ranking.append((abs(m1-m0)/sdev[t],t))
+            rvec[t]=m1-m0
 
-    verbout("\n\nFound Vector between 0 and 1. Highest values (first 20): ",master=master)
-    for e in ranking[:20]:
-        verbout("\n   Feature '"+e[1]+"': "+"{0:.2f}".format(e[0]),'table',master=master)
+        ranking = sorted(ranking, reverse=True)
+        #ranking2 = sorted(ranking2, reverse=True)
 
-    cuti =int(len(ranking)/50)
-##    for i in range(len(ranking)):
-##        if ranking[i][0] < .1:
-##            cuti = i
-##            break
-    if cuti > 0:
-        verbout('\n\nPruning list to include only top 2%',master=master)
-        ranking = ranking[:cuti]
-    verbout('\nRemaining possible discriminating features: '+str(len(ranking)),master=master)
+        verbout("\n\nFound Vector between 0 and 1. Highest values (first 20): ",master=master)
+        for e in ranking[:20]:
+            verbout("\n   Feature '"+e[1]+"': "+"{0:.2f}".format(e[0]),'table',master=master)
 
-    ##Step 3: Train SVM
+        cuti =int(len(ranking)/50)
+    ##    for i in range(len(ranking)):
+    ##        if ranking[i][0] < .1:
+    ##            cuti = i
+    ##            break
+        if cuti > 0:
+            verbout('\n\nPruning list to include only top 2%',master=master)
+            ranking = ranking[:cuti]
+        verbout('\nRemaining possible discriminating features: '+str(len(ranking)),master=master)
+
+        ##Step 3: Train SVM
 
 
-    verbout("\n\nSeeking optimal hyperplane by iteratively including features...",master=master)
+        verbout("\n\nSeeking optimal hyperplane by iteratively including features...",master=master)
 
-    use_features = [] ## Replace by iterative loop later.
-    highest_f = 0
-    count_noninvar = 0
-    for nfeats in range(0,len(ranking)):
-        use_features.append(ranking[nfeats][1])
-        #verbout('\n'+str(nfeats+1)+' - Including "'+ranking[nfeats][1]+'": ',master=master)
-        scorelist = svm_scores(tdm,rvec,use_features)
-        intercepts = []
-        nsteps = 50
-        step = (max(scorelist)-min(scorelist))/(nsteps-1)
-        ms = min(scorelist)
-        for s in range(nsteps):
-            intercepts.append(-1*(ms+s*step))
-
-        maxf = 0
-        maxint = 0
-        for i in intercepts:
-            rvec['Intercept'] = i
+        use_features = [] ## Replace by iterative loop later.
+        highest_f = 0
+        count_noninvar = 0
+        for nfeats in range(0,len(ranking)):
+            use_features.append(ranking[nfeats][1])
+            #verbout('\n'+str(nfeats+1)+' - Including "'+ranking[nfeats][1]+'": ',master=master)
             scorelist = svm_scores(tdm,rvec,use_features)
-            #print(min(scorelist),max(scorelist))
-            prf = svm_prf(scorelist,classvec)
-            f = prf[2]
-            #print(i,f)
-            if f > maxf:
-                maxf = f
-                maxint = i
+            intercepts = []
+            nsteps = 50
+            step = (max(scorelist)-min(scorelist))/(nsteps-1)
+            ms = min(scorelist)
+            for s in range(nsteps):
+                intercepts.append(-1*(ms+s*step))
 
-        #verbout(" : "+str([maxint,maxf]))
-        if maxf > highest_f:
-            df = maxf-highest_f
-            verbout('\n   Added: "'+ranking[nfeats][1]+'\t\tdF='+"{0:.5f}".format(df)+" (Feature "+str(nfeats)+"/"+str(len(ranking))+") ",'table',master=master)
-            highest_f = maxf
-            optinum = nfeats+1
-            optrvec = {'Intercept':maxint}
-            for t in use_features:
-                optrvec[t] = rvec[t]
-            count_noninvar = 0
-        else:
-            count_noninvar +=1
-            verbout('.','table',master=master)
-            use_features = use_features[:-1] ##Remove latest addition
-            #if count_noninvar > 20: break
+            maxf = 0
+            maxint = 0
+            for i in intercepts:
+                rvec['Intercept'] = i
+                scorelist = svm_scores(tdm,rvec,use_features)
+                #print(min(scorelist),max(scorelist))
+                prf = svm_prf(scorelist,classvec)
+                f = prf[2]
+                #print(i,f)
+                if f > maxf:
+                    maxf = f
+                    maxint = i
 
-    verbout('\n\nBest number of features: '+str(len(use_features)),master=master)
-    verbout('\nFirst 20:\n',master=master)
-    verbout(str(use_features[:20]),'table',master=master)
+            #verbout(" : "+str([maxint,maxf]))
+            if maxf > highest_f:
+                df = maxf-highest_f
+                verbout('\n   Added: "'+ranking[nfeats][1]+'\t\tdF='+"{0:.5f}".format(df)+" (Feature "+str(nfeats)+"/"+str(len(ranking))+") ",'table',master=master)
+                highest_f = maxf
+                optinum = nfeats+1
+                optrvec = {'Intercept':maxint}
+                for t in use_features:
+                    optrvec[t] = rvec[t]
+                count_noninvar = 0
+            else:
+                count_noninvar +=1
+                verbout('.','table',master=master)
+                use_features = use_features[:-1] ##Remove latest addition
+                #if count_noninvar > 20: break
 
-    return[optrvec,maxf]
+        verbout('\n\nBest number of features: '+str(len(use_features)),master=master)
+        verbout('\nFirst 20:\n',master=master)
+        verbout(str(use_features[:20]),'table',master=master)
+
+        return[optrvec,maxf,ranking[:50]]
+    else:
+        return[{},0.0,[]]
 
 
 
@@ -17268,7 +17293,7 @@ def create_coding_dic(data,uvar,cvar,varlist,unitlist=[],master=''): ##Reliabili
     panz = 1
     if step<1:
         step=1
-        panz = int(40.0/len(pairs))
+        panz = int(40.0/len(data[uvar]))
 
     for i in range(len(data[uvar])):
         if i%step==0:verbout('.'*panz,'progress',master=master)
